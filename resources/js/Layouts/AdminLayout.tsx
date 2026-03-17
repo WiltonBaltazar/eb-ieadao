@@ -1,0 +1,195 @@
+import React, { useState } from 'react';
+import { Link, usePage, router } from '@inertiajs/react';
+import { PageProps } from '@/types';
+import { Button } from '@/Components/ui/button';
+import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/Components/ui/dropdown-menu';
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  CalendarDays,
+  BarChart2,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Sheet, SheetContent, SheetTrigger } from '@/Components/ui/sheet';
+
+interface AdminLayoutProps {
+  children: React.ReactNode;
+  breadcrumbs?: Array<{ label: string; href?: string }>;
+}
+
+const navItems = [
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/admin/utilizadores', label: 'Utilizadores', icon: Users },
+  { href: '/admin/turmas', label: 'Turmas', icon: BookOpen },
+  { href: '/admin/sessoes', label: 'Sessões', icon: CalendarDays },
+  { href: '/admin/relatorios', label: 'Relatórios', icon: BarChart2 },
+  { href: '/admin/definicoes', label: 'Definições', icon: Settings },
+];
+
+function NavLink({ href, label, icon: Icon, collapsed, exact }: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  collapsed?: boolean;
+  exact?: boolean;
+}) {
+  const currentUrl = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isActive = exact ? currentUrl === href : currentUrl.startsWith(href);
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm',
+        isActive
+          ? 'bg-slate-800 text-white'
+          : 'text-slate-300 hover:bg-slate-700 hover:text-white',
+        collapsed && 'justify-center px-2'
+      )}
+      title={collapsed ? label : undefined}
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+      {!collapsed && <span>{label}</span>}
+    </Link>
+  );
+}
+
+export default function AdminLayout({ children, breadcrumbs }: AdminLayoutProps) {
+  const { auth } = usePage<PageProps>().props;
+  const [collapsed, setCollapsed] = useState(false);
+
+  const handleLogout = () => {
+    router.post('/logout');
+  };
+
+  return (
+    <div className="min-h-screen flex bg-slate-50">
+      {/* Sidebar — desktop */}
+      <aside className={cn(
+        'hidden md:flex flex-col bg-slate-900 transition-all duration-300',
+        collapsed ? 'w-16' : 'w-56'
+      )}>
+        <div className={cn(
+          'h-14 flex items-center border-b border-slate-700 px-4',
+          collapsed ? 'justify-center' : 'justify-between'
+        )}>
+          {!collapsed && (
+            <span className="text-white font-semibold text-sm truncate">IEADAO</span>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-slate-400 hover:text-white p-1 rounded"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        </div>
+
+        <nav className="flex-1 py-4 px-2 flex flex-col gap-1">
+          {navItems.map((item) => (
+            <NavLink key={item.href} {...item} collapsed={collapsed} />
+          ))}
+        </nav>
+
+        <div className="p-2 border-t border-slate-700">
+          <button
+            onClick={handleLogout}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-700 hover:text-white transition-colors w-full text-sm',
+              collapsed && 'justify-center px-2'
+            )}
+            title={collapsed ? 'Sair' : undefined}
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            {!collapsed && <span>Sair</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar */}
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 gap-3 sticky top-0 z-40">
+          {/* Mobile menu */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 bg-slate-900 p-0">
+              <div className="h-14 flex items-center px-4 border-b border-slate-700">
+                <span className="text-white font-semibold">IEADAO</span>
+              </div>
+              <nav className="py-4 px-2 flex flex-col gap-1">
+                {navItems.map((item) => (
+                  <NavLink key={item.href} {...item} />
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
+
+          {/* Breadcrumbs */}
+          {breadcrumbs && breadcrumbs.length > 0 && (
+            <nav className="flex items-center gap-1 text-sm text-slate-500 flex-1">
+              {breadcrumbs.map((crumb, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <span>/</span>}
+                  {crumb.href ? (
+                    <Link href={crumb.href} className="hover:text-slate-800">{crumb.label}</Link>
+                  ) : (
+                    <span className="text-slate-800 font-medium">{crumb.label}</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </nav>
+          )}
+
+          <div className="ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 h-9 px-2">
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="text-xs bg-slate-200">
+                      {auth.user?.name?.charAt(0)?.toUpperCase() ?? 'A'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden md:block text-sm text-slate-700 max-w-[8rem] truncate">
+                    {auth.user?.name}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem disabled>
+                  <span className="text-xs text-slate-500 capitalize">{auth.user?.role}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 md:p-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

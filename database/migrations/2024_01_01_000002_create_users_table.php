@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (Schema::hasTable('users')) {
+            return;
+        }
+
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->nullable()->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password')->nullable();
+            $table->string('role')->default('student');
+            $table->unsignedBigInteger('classroom_id')->nullable();
+            $table->string('phone')->nullable()->unique();
+            $table->string('whatsapp')->nullable();
+            $table->string('alt_contact')->nullable();
+            $table->string('grupo_homogeneo')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+
+            $table->foreign('classroom_id')->references('id')->on('classrooms')->nullOnDelete();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+    }
+};
