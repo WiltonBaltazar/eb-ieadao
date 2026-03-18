@@ -22,6 +22,7 @@ import {
   Phone,
   X,
   Eye,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { PageProps, PaginatedData } from '@/types';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
@@ -129,12 +130,20 @@ export default function TurmaAlunos({
               )}
             </p>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/turmas">
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Turmas
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild size="sm" variant="outline" className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50">
+              <a href={`/admin/relatorios/turma/${classroom.id}/exportar-excel`} download>
+                <FileSpreadsheet className="h-4 w-4" />
+                Excel
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/turmas">
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Turmas
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Summary cards */}
