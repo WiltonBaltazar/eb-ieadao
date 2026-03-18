@@ -16,9 +16,10 @@ interface Props extends PageProps {
   };
   qrSvg: string | null;
   checkInUrl: string;
+  canManage: boolean;
 }
 
-export default function SessaoQr({ studySession, qrSvg, checkInUrl }: Props) {
+export default function SessaoQr({ studySession, qrSvg, checkInUrl, canManage }: Props) {
   const [timeLeft, setTimeLeft] = useState('');
   const [expired, setExpired] = useState(false);
 
@@ -87,23 +88,25 @@ export default function SessaoQr({ studySession, qrSvg, checkInUrl }: Props) {
           </div>
         )}
 
-        <div className="flex gap-3 justify-center">
-          <Button
-            onClick={handleRegenerate}
-            variant="outline"
-            className="bg-transparent border-slate-600 text-white hover:bg-slate-800"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Gerar Novo Código
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            className="text-slate-400 hover:text-white"
-          >
-            <a href="/admin/sessoes">← Voltar</a>
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex gap-3 justify-center">
+            <Button
+              onClick={handleRegenerate}
+              variant="outline"
+              className="bg-transparent border-slate-600 text-white hover:bg-slate-800"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Gerar Novo Código
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className="text-slate-400 hover:text-white"
+            >
+              <a href="/admin/sessoes">← Voltar</a>
+            </Button>
+          </div>
+        )}
 
         <p className="text-xs text-slate-600 break-all">{checkInUrl}</p>
       </div>

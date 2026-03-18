@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Classroom extends Model
@@ -12,7 +12,7 @@ class Classroom extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'description', 'teacher_id',
+        'name', 'description',
         'meeting_day', 'meeting_time', 'is_active',
     ];
 
@@ -20,21 +20,9 @@ class Classroom extends Model
         'is_active' => 'boolean',
     ];
 
-    protected static function booted(): void
+public function teachers(): BelongsToMany
     {
-        static::saving(function (Classroom $classroom) {
-            // Only one active classroom at a time
-            if ($classroom->is_active) {
-                static::where('id', '!=', $classroom->id ?? 0)
-                    ->where('is_active', true)
-                    ->update(['is_active' => false]);
-            }
-        });
-    }
-
-    public function teacher(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'teacher_id');
+        return $this->belongsToMany(User::class, 'classroom_teacher');
     }
 
     public function students(): HasMany

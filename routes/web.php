@@ -27,6 +27,8 @@ Route::get('/acesso-sessao/{studySession}', [CheckInController::class, 'show'])-
 Route::post('/check-in/{studySession}', [CheckInController::class, 'store'])->name('check-in.store');
 
 // Public Student Registration
+Route::get('/registar', [RegistrationController::class, 'showGeneral'])->name('registration.general');
+Route::post('/registar', [RegistrationController::class, 'storeGeneral'])->name('registration.general.store');
 Route::get('/registar/{studySession}', [RegistrationController::class, 'show'])->name('registration.show');
 Route::post('/registar/{studySession}', [RegistrationController::class, 'store'])->name('registration.store');
 
@@ -34,7 +36,7 @@ Route::post('/registar/{studySession}', [RegistrationController::class, 'store']
 require __DIR__.'/auth.php';
 
 // Student Routes
-Route::middleware(['role:student'])->group(function () {
+Route::middleware(['role:student,teacher'])->group(function () {
     Route::get('/meu-perfil', [StudentProfileController::class, 'show'])->name('student.profile');
     Route::get('/minhas-presencas', [StudentAttendanceController::class, 'index'])->name('student.attendances');
     Route::get('/perfil/editar', [StudentProfileController::class, 'edit'])->name('student.profile.edit');
@@ -44,10 +46,16 @@ Route::middleware(['role:student'])->group(function () {
 // Admin/Teacher Routes
 Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/ranking', [DashboardController::class, 'attendanceRanking'])->name('admin.ranking');
+
+    // Profile
+    Route::get('/perfil', [\App\Http\Controllers\Admin\AdminProfileController::class, 'edit'])->name('admin.profile.edit');
+    Route::put('/perfil', [\App\Http\Controllers\Admin\AdminProfileController::class, 'update'])->name('admin.profile.update');
 
     // Users
     Route::get('/utilizadores', [UsersController::class, 'index'])->name('admin.users.index');
     Route::post('/utilizadores', [UsersController::class, 'store'])->name('admin.users.store');
+    Route::get('/utilizadores/{user}', [UsersController::class, 'show'])->name('admin.users.show');
     Route::put('/utilizadores/{user}', [UsersController::class, 'update'])->name('admin.users.update');
     Route::delete('/utilizadores/{user}', [UsersController::class, 'destroy'])->name('admin.users.destroy');
 
@@ -56,6 +64,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::post('/turmas', [ClassroomsController::class, 'store'])->name('admin.classrooms.store');
     Route::put('/turmas/{classroom}', [ClassroomsController::class, 'update'])->name('admin.classrooms.update');
     Route::delete('/turmas/{classroom}', [ClassroomsController::class, 'destroy'])->name('admin.classrooms.destroy');
+    Route::get('/turmas/{classroom}/alunos', [ClassroomsController::class, 'students'])->name('admin.classrooms.students');
 
     // Study Sessions
     Route::get('/sessoes', [StudySessionsController::class, 'index'])->name('admin.sessions.index');
@@ -66,11 +75,17 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::post('/sessoes/{studySession}/fechar', [StudySessionsController::class, 'close'])->name('admin.sessions.close');
     Route::post('/sessoes/{studySession}/regenerar-codigo', [StudySessionsController::class, 'regenerateCode'])->name('admin.sessions.regenerate');
     Route::post('/sessoes/{studySession}/marcar-presente', [StudySessionsController::class, 'markPresent'])->name('admin.sessions.mark-present');
+    Route::get('/sessoes/{studySession}/presencas', [StudySessionsController::class, 'attendance'])->name('admin.sessions.attendance');
+    Route::get('/sessoes/{studySession}/exportar-excel', [StudySessionsController::class, 'exportExcel'])->name('admin.sessions.export-excel');
+    Route::post('/sessoes/{studySession}/registar-e-marcar', [StudySessionsController::class, 'registerAndMark'])->name('admin.sessions.register-and-mark');
+    Route::delete('/presencas/{attendance}', [StudySessionsController::class, 'removeAttendance'])->name('admin.attendances.destroy');
 
     // Reports
     Route::get('/relatorios', [ReportsController::class, 'index'])->name('admin.reports.index');
+    Route::get('/relatorios/chart-data', [ReportsController::class, 'chartData'])->name('admin.reports.chart-data');
     Route::get('/relatorios/registos', [ReportsController::class, 'registros'])->name('admin.reports.registros');
     Route::get('/relatorios/exportar', [ReportsController::class, 'exportCsv'])->name('admin.reports.export');
+    Route::get('/relatorios/turma/{classroom}/exportar-excel', [ReportsController::class, 'exportClassroomExcel'])->name('admin.reports.export-classroom');
 });
 
 // Admin only settings
@@ -79,7 +94,5 @@ Route::middleware(['role:admin'])->group(function () {
     Route::put('/admin/definicoes', [SettingsController::class, 'update'])->name('admin.settings.update');
 });
 
-// QR Display (admin/teacher)
-Route::middleware(['role:admin,teacher'])->group(function () {
-    Route::get('/qr/sessao/{studySession}', [SessionQrController::class, 'show'])->name('sessions.qr');
-});
+// QR Display (public)
+Route::get('/qr/sessao/{studySession}', [SessionQrController::class, 'show'])->name('sessions.qr');

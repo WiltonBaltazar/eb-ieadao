@@ -9,11 +9,15 @@ import { MeuPerfilPageProps } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 
 export default function MeuPerfil({ student, stats, lastAttendances, upcomingSessions }: MeuPerfilPageProps) {
-  const methodBadge = (method: string) => (
-    <Badge variant="outline" className={method === 'qr' ? 'border-purple-300 text-purple-700' : 'border-slate-300 text-slate-600'}>
-      {method === 'qr' ? 'QR' : 'Manual'}
-    </Badge>
-  );
+  const methodBadge = (method: string) => {
+    const styles = method === 'qr'
+      ? 'border-purple-300 text-purple-700'
+      : method === 'auto'
+        ? 'border-green-300 text-green-700'
+        : 'border-slate-300 text-slate-600';
+    const label = method === 'qr' ? 'QR' : method === 'auto' ? 'Auto' : 'Manual';
+    return <Badge variant="outline" className={styles}>{label}</Badge>;
+  };
 
   return (
     <StudentLayout>

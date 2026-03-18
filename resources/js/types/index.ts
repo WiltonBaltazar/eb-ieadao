@@ -28,8 +28,12 @@ export interface StudySession {
   status_label: string;
   classroom_name: string;
   classroom_id: number;
+  teacher_id: number | null;
+  teacher_name: string | null;
+  session_date_iso: string;
   lesson_type: string | null;
   attendances_count?: number;
+  check_in_code: string | null;
   check_in_code_expires_at: string | null;
 }
 
@@ -38,7 +42,7 @@ export interface AttendanceRecord {
   session_title: string;
   session_date: string;
   classroom_name: string;
-  method: 'manual' | 'qr';
+  method: 'manual' | 'qr' | 'auto';
   method_label: string;
   checked_in_at: string;
 }
@@ -78,6 +82,7 @@ export interface AcessoSessaoPageProps extends PageProps {
     status: string;
     status_label: string;
     classroom: { name: string };
+    check_in_code: string | null;
     check_in_code_expires_at: string | null;
   };
   auth_phone: string | null;
@@ -85,7 +90,7 @@ export interface AcessoSessaoPageProps extends PageProps {
 }
 
 export interface RegistarPageProps extends PageProps {
-  studySession: { id: number; title: string; session_date: string };
+  studySession: { id: number; title: string; session_date: string; classroom_id?: number } | null;
   prefillPhone: string;
   classrooms: Array<{ id: number; name: string; teacher_name: string | null }>;
   gruposOptions: Array<{ value: string; label: string }>;

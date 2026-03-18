@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Button } from '@/Components/ui/button';
@@ -21,9 +21,10 @@ import {
   SelectValue,
 } from '@/Components/ui/select';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
-import { Plus, Search, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Search, Trash2, AlertCircle, Eye } from 'lucide-react';
 import { PageProps, PaginatedData } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
+import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
 
 interface UserRow {
   id: number;
@@ -55,6 +56,7 @@ const roleColors: Record<string, string> = {
 export default function Utilizadores({ users, classrooms, roles, gruposOptions, filters, errors }: Props) {
   const [search, setSearch] = useState(filters.search ?? '');
   const [showCreate, setShowCreate] = useState(false);
+  const { handleSort, handlePerPage } = useTableNav('/admin/utilizadores', filters);
 
   const handleSearch = () => {
     router.get('/admin/utilizadores', { ...filters, search }, { preserveState: true });
@@ -140,12 +142,16 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
                     </div>
                   </>
                 )}
-                {createForm.data.role === 'student' && (
+                {(createForm.data.role === 'student' || createForm.data.role === 'teacher') && (
                   <>
                     <div className="space-y-1">
-                      <Label>Telefone *</Label>
+                      <Label>{createForm.data.role === 'student' ? 'Telefone *' : 'Telefone (Whatsapp)'}</Label>
                       <Input type="tel" value={createForm.data.phone} onChange={(e) => createForm.setData('phone', e.target.value)} />
                     </div>
+                  </>
+                )}
+                {(createForm.data.role === 'student' || createForm.data.role === 'teacher') && (
+                  <>
                     <div className="space-y-1">
                       <Label>Grupo Homogéneo</Label>
                       <Select value={createForm.data.grupo_homogeneo} onValueChange={(v) => createForm.setData('grupo_homogeneo', v)}>
@@ -155,16 +161,18 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label>Turma</Label>
-                      <Select value={createForm.data.classroom_id} onValueChange={(v) => createForm.setData('classroom_id', v)}>
-                        <SelectTrigger><SelectValue placeholder="Seleciona…" /></SelectTrigger>
-                        <SelectContent>
-                          {classrooms.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </>
+                )}
+                {(createForm.data.role === 'student' || createForm.data.role === 'teacher') && (
+                  <div className="space-y-1">
+                    <Label>Turma</Label>
+                    <Select value={createForm.data.classroom_id} onValueChange={(v) => createForm.setData('classroom_id', v)}>
+                      <SelectTrigger><SelectValue placeholder="Seleciona…" /></SelectTrigger>
+                      <SelectContent>
+                        {classrooms.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
                 <div className="flex gap-2 pt-2">
                   <Button type="submit" className="flex-1" disabled={createForm.processing}>
@@ -195,17 +203,17 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
                   <Search className="h-4 w-4" />
                 </Button>
               </div>
-              <Select value={filters.role ?? ''} onValueChange={(v) => handleFilter('role', v)}>
+              <Select value={filters.role ?? 'all'} onValueChange={(v) => handleFilter('role', v === 'all' ? '' : v)}>
                 <SelectTrigger className="h-8 w-36"><SelectValue placeholder="Todos os papéis" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {roles.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={filters.classroom_id ?? ''} onValueChange={(v) => handleFilter('classroom_id', v)}>
+              <Select value={filters.classroom_id ?? 'all'} onValueChange={(v) => handleFilter('classroom_id', v === 'all' ? '' : v)}>
                 <SelectTrigger className="h-8 w-36"><SelectValue placeholder="Todas as turmas" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   {classrooms.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -220,9 +228,9 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
               <table className="w-full text-sm">
                 <thead className="border-b border-slate-100">
                   <tr>
-                    <th className="text-left px-6 py-3 text-slate-500 font-medium">Nome</th>
-                    <th className="text-left px-4 py-3 text-slate-500 font-medium hidden md:table-cell">Contacto</th>
-                    <th className="text-left px-4 py-3 text-slate-500 font-medium">Papel</th>
+                    <SortableTh label="Nome" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />
+                    <SortableTh label="Contacto" column="phone" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="hidden md:table-cell" />
+                    <SortableTh label="Papel" column="role" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} />
                     <th className="text-left px-4 py-3 text-slate-500 font-medium hidden lg:table-cell">Turma</th>
                     <th className="text-left px-4 py-3 text-slate-500 font-medium hidden lg:table-cell">Grupo</th>
                     <th className="text-right px-6 py-3 text-slate-500 font-medium">Ações</th>
@@ -249,13 +257,18 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
                           {u.attendance_rate !== null && (
                             <span className="text-xs text-slate-400 mr-2">{u.attendance_rate}%</span>
                           )}
+                          <Button asChild size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-slate-600">
+                            <Link href={`/admin/utilizadores/${u.id}`}>
+                              <Eye className="h-3.5 w-3.5" />Ver Detalhes
+                            </Link>
+                          </Button>
                           <Button
-                            size="icon"
+                            size="sm"
                             variant="ghost"
-                            className="h-7 w-7"
+                            className="h-7 px-2 gap-1 text-xs text-red-500"
                             onClick={() => handleDelete(u.id, u.name)}
                           >
-                            <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                            <Trash2 className="h-3.5 w-3.5" />Eliminar
                           </Button>
                         </div>
                       </td>
@@ -267,7 +280,12 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
           </CardContent>
         </Card>
 
-        <p className="text-sm text-slate-500 text-center">{users.total} utilizadores</p>
+        <TablePagination
+          data={users}
+          currentPath="/admin/utilizadores"
+          params={filters}
+          onPerPageChange={handlePerPage}
+        />
       </div>
     </AdminLayout>
   );

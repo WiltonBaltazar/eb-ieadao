@@ -16,7 +16,7 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
 
   const { data, setData, post, processing } = useForm({
     phone: auth_phone ?? '',
-    code: '',
+    code: session.check_in_code ?? '',
   });
 
   // Countdown timer
@@ -47,9 +47,6 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
 
   const handleSubmit: FormEventHandler = (e) => {
     e.preventDefault();
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code') ?? data.code;
-    setData('code', code);
     post(`/check-in/${session.id}`);
   };
 
@@ -96,10 +93,12 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
             <AlertDescription>{flash.info}</AlertDescription>
           </Alert>
         )}
-        {(errors?.phone || errors?.general) && (
+        {errors && Object.keys(errors).length > 0 && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{errors?.phone ?? errors?.general}</AlertDescription>
+            <AlertDescription>
+              {errors.phone ?? errors.code ?? errors.general ?? Object.values(errors)[0]}
+            </AlertDescription>
           </Alert>
         )}
 

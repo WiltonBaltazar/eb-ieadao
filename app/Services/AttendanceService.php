@@ -28,7 +28,15 @@ class AttendanceService
             'check_in_code_expires_at' => $now->copy()->addMinutes($ttl),
         ]);
 
-        return $session->fresh();
+        $session = $session->fresh();
+
+        if ($session->teacher_id) {
+            try {
+                $this->createAttendance($session, User::find($session->teacher_id), null, CheckInMethod::Auto);
+            } catch (AttendanceException) {}
+        }
+
+        return $session;
     }
 
     public function closeSession(StudySession $session): StudySession
@@ -67,7 +75,7 @@ class AttendanceService
 
         // 1. Phone must be registered
         $student = User::where('phone', $phone)
-            ->where('role', 'student')
+            ->whereIn('role', ['student', 'teacher'])
             ->first();
 
         if (!$student) {
@@ -99,10 +107,6 @@ class AttendanceService
 
     public function markPresent(StudySession $session, User $student, User $markedBy): Attendance
     {
-        if (!$session->isOpen()) {
-            throw new AttendanceException('A sessão não está aberta.');
-        }
-
         return $this->createAttendance($session, $student, $markedBy, CheckInMethod::Manual);
     }
 

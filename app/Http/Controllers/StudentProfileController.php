@@ -94,7 +94,6 @@ class StudentProfileController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:50|unique:users,phone,' . $user->id,
-            'whatsapp' => 'nullable|string|max:50',
             'alt_contact' => 'nullable|string|max:255',
             'grupo_homogeneo' => 'nullable|in:' . implode(',', array_column(GrupoHomogeneo::cases(), 'value')),
         ], [
@@ -104,7 +103,7 @@ class StudentProfileController extends Controller
         ]);
 
         // classroom_id is NOT updateable by student
-        $user->update($validated);
+        $user->update([...$validated, 'whatsapp' => $validated['phone']]);
 
         return back()->with('success', 'Perfil atualizado com sucesso!');
     }

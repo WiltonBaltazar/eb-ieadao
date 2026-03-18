@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\StudySession;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -33,6 +34,7 @@ class SessionQrController extends Controller
             ],
             'qrSvg' => $qrSvg,
             'checkInUrl' => $checkInUrl,
+            'canManage' => Auth::check() && in_array(Auth::user()->role->value, ['admin', 'teacher']),
         ]);
     }
 }

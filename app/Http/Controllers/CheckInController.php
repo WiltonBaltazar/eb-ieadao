@@ -20,7 +20,7 @@ class CheckInController extends Controller
 
     public function show(StudySession $studySession): Response
     {
-        $studySession->load('classroom.teacher');
+        $studySession->load('classroom');
 
         return Inertia::render('AcessoSessao', [
             'session' => [
@@ -32,12 +32,13 @@ class CheckInController extends Controller
                 'classroom' => [
                     'name' => $studySession->classroom->name,
                 ],
+                'check_in_code' => $studySession->check_in_code,
                 'check_in_code_expires_at' => $studySession->check_in_code_expires_at?->toISOString(),
             ],
-            'auth_phone' => Auth::check() && Auth::user()->isStudent()
+            'auth_phone' => Auth::check() && (Auth::user()->isStudent() || Auth::user()->isTeacher())
                 ? Auth::user()->phone
                 : null,
-            'auth_name' => Auth::check() && Auth::user()->isStudent()
+            'auth_name' => Auth::check() && (Auth::user()->isStudent() || Auth::user()->isTeacher())
                 ? Auth::user()->name
                 : null,
         ]);

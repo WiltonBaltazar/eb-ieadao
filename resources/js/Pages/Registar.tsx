@@ -26,15 +26,18 @@ export default function Registar({
   const { data, setData, post, processing } = useForm({
     name: '',
     phone: prefillPhone ?? '',
-    whatsapp: '',
     alt_contact: '',
     grupo_homogeneo: '',
-    classroom_id: '',
+    classroom_id: studySession?.classroom_id ? String(studySession.classroom_id) : '',
   });
 
   const handleSubmit: FormEventHandler = (e) => {
     e.preventDefault();
-    post(`/registar/${studySession.id}`);
+    if (studySession) {
+      post(`/registar/${studySession.id}`);
+    } else {
+      post('/registar');
+    }
   };
 
   return (
@@ -45,8 +48,10 @@ export default function Registar({
           <CardHeader>
             <CardTitle>Criar Conta</CardTitle>
             <CardDescription>
-              Preenche os teus dados para confirmar a presença em{' '}
-              <strong>{studySession.title}</strong>
+              {studySession
+                ? <>Preenche os teus dados para confirmar a presença em{' '}<strong>{studySession.title}</strong></>
+                : 'Preenche os teus dados para criar a tua conta.'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -73,7 +78,7 @@ export default function Registar({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone *</Label>
+                <Label htmlFor="phone">Telefone / WhatsApp *</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -83,17 +88,6 @@ export default function Registar({
                   className={errors?.phone ? 'border-red-500' : ''}
                 />
                 {errors?.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp <span className="text-slate-400">(opcional)</span></Label>
-                <Input
-                  id="whatsapp"
-                  type="tel"
-                  value={data.whatsapp}
-                  onChange={(e) => setData('whatsapp', e.target.value)}
-                  placeholder="Igual ao telefone se não preencheres"
-                />
               </div>
 
               <div className="space-y-2">
@@ -149,7 +143,7 @@ export default function Registar({
               </div>
 
               <Button type="submit" className="w-full" disabled={processing}>
-                {processing ? 'A registar...' : 'Registar e Confirmar Presença'}
+                {processing ? 'A registar...' : studySession ? 'Registar e Confirmar Presença' : 'Criar Conta'}
               </Button>
             </form>
           </CardContent>

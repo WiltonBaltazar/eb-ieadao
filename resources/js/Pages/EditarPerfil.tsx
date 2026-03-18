@@ -1,4 +1,4 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 import StudentLayout from '@/Layouts/StudentLayout';
 import { Button } from '@/Components/ui/button';
@@ -6,7 +6,7 @@ import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
-import { CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -21,7 +21,6 @@ export default function EditarPerfil({ student, gruposOptions, errors }: EditarP
   const { data, setData, put, processing } = useForm({
     name: student.name ?? '',
     phone: student.phone ?? '',
-    whatsapp: student.whatsapp ?? '',
     alt_contact: student.alt_contact ?? '',
     grupo_homogeneo: student.grupo_homogeneo ?? '',
   });
@@ -35,8 +34,13 @@ export default function EditarPerfil({ student, gruposOptions, errors }: EditarP
     <StudentLayout>
       <Head title="Editar Perfil — IEADAO Presenças" />
 
-      <div className="max-w-md space-y-4">
-        <h1 className="text-2xl font-bold text-slate-800">Editar Perfil</h1>
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+            <Link href="/meu-perfil"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+          <h1 className="text-2xl font-bold text-slate-800">Editar Perfil</h1>
+        </div>
 
         {flash?.success && (
           <Alert className="border-green-200 bg-green-50 text-green-800">
@@ -63,7 +67,7 @@ export default function EditarPerfil({ student, gruposOptions, errors }: EditarP
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone *</Label>
+                <Label htmlFor="phone">Telefone / WhatsApp *</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -72,16 +76,6 @@ export default function EditarPerfil({ student, gruposOptions, errors }: EditarP
                   className={errors?.phone ? 'border-red-500' : ''}
                 />
                 {errors?.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp</Label>
-                <Input
-                  id="whatsapp"
-                  type="tel"
-                  value={data.whatsapp}
-                  onChange={(e) => setData('whatsapp', e.target.value)}
-                />
               </div>
 
               <div className="space-y-2">

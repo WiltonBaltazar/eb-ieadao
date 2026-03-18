@@ -13,6 +13,7 @@ import {
 import {
   LayoutDashboard,
   Users,
+  User,
   BookOpen,
   CalendarDays,
   BarChart2,
@@ -34,7 +35,7 @@ const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/utilizadores', label: 'Utilizadores', icon: Users },
   { href: '/admin/turmas', label: 'Turmas', icon: BookOpen },
-  { href: '/admin/sessoes', label: 'Sessões', icon: CalendarDays },
+  { href: '/admin/sessoes', label: 'Aulas', icon: CalendarDays },
   { href: '/admin/relatorios', label: 'Relatórios', icon: BarChart2 },
   { href: '/admin/definicoes', label: 'Definições', icon: Settings },
 ];
@@ -174,6 +175,13 @@ export default function AdminLayout({ children, breadcrumbs }: AdminLayoutProps)
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem disabled>
                   <span className="text-xs text-slate-500 capitalize">{auth.user?.role}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/perfil">
+                    <User className="mr-2 h-4 w-4" />
+                    Meu Perfil
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600">

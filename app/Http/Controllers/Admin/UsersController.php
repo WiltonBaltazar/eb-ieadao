@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\GrupoHomogeneo;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
 use App\Models\Classroom;
+use App\Models\StudySession;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +19,7 @@ class UsersController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = User::with('classroom')->latest();
+        $query = User::with('classroom');
 
         if ($request->filled('role')) {
             $query->where('role', $request->role);
@@ -36,7 +38,14 @@ class UsersController extends Controller
             });
         }
 
-        $users = $query->paginate(20)->through(fn ($u) => [
+        $sortable = ['name', 'email', 'phone', 'role', 'created_at'];
+        $sortBy = in_array($request->input('sort_by'), $sortable) ? $request->input('sort_by') : 'name';
+        $sortDir = $request->input('sort_dir') === 'desc' ? 'desc' : 'asc';
+        $query->orderBy($sortBy, $sortDir);
+
+        $perPage = in_array((int) $request->input('per_page'), [25, 50, 100]) ? (int) $request->input('per_page') : 25;
+
+        $users = $query->paginate($perPage)->withQueryString()->through(fn ($u) => [
             'id' => $u->id,
             'name' => $u->name,
             'email' => $u->email,
@@ -46,15 +55,75 @@ class UsersController extends Controller
             'classroom_name' => $u->classroom?->name,
             'grupo_homogeneo' => $u->grupo_homogeneo?->value,
             'grupo_homogeneo_label' => $u->grupo_homogeneo?->label(),
-            'attendance_rate' => $u->isStudent() ? $u->attendanceRatio()['rate'] : null,
+            'attendance_rate' => $u->isStudent() || $u->isTeacher() ? $u->attendanceRatio()['rate'] : null,
         ]);
 
         return Inertia::render('Admin/Utilizadores', [
             'users' => $users,
-            'classrooms' => Classroom::all()->map(fn ($c) => ['id' => $c->id, 'name' => $c->name]),
+            'classrooms' => Classroom::where('is_active', true)->get()->map(fn ($c) => ['id' => $c->id, 'name' => $c->name]),
             'roles' => collect(Role::cases())->map(fn ($r) => ['value' => $r->value, 'label' => $r->label()]),
             'gruposOptions' => collect(GrupoHomogeneo::cases())->map(fn ($g) => ['value' => $g->value, 'label' => $g->label()]),
-            'filters' => $request->only(['role', 'classroom_id', 'grupo_homogeneo', 'search']),
+            'filters' => $request->only(['role', 'classroom_id', 'grupo_homogeneo', 'search', 'sort_by', 'sort_dir', 'per_page']),
+        ]);
+    }
+
+    public function show(Request $request, User $user): Response
+    {
+        $user->load('classroom');
+
+        $query = StudySession::where('classroom_id', $user->classroom_id)
+            ->whereIn('status', ['open', 'closed'])
+            ->with('teacher');
+
+        // Count totals before pagination
+        $allSessionIds = (clone $query)->pluck('id');
+        $attendanceMap = Attendance::where('student_id', $user->id)
+            ->whereIn('study_session_id', $allSessionIds)
+            ->get()
+            ->keyBy('study_session_id');
+
+        $totalAll = $allSessionIds->count();
+        $attendedAll = $attendanceMap->count();
+        $rate = $totalAll > 0 ? round(($attendedAll / $totalAll) * 100) : 0;
+
+        $sortable = ['title', 'session_date'];
+        $sortBy = in_array($request->input('sort_by'), $sortable) ? $request->input('sort_by') : 'session_date';
+        $sortDir = $request->input('sort_dir') === 'desc' ? 'desc' : 'asc';
+        $query->orderBy($sortBy, $sortDir);
+
+        $perPage = in_array((int) $request->input('per_page'), [25, 50, 100]) ? (int) $request->input('per_page') : 25;
+
+        $sessions = $query->paginate($perPage)->withQueryString()->through(function ($s) use ($attendanceMap) {
+            $att = $attendanceMap->get($s->id);
+            return [
+                'id'            => $s->id,
+                'title'         => $s->title,
+                'session_date'  => $s->session_date->format('d/m/Y'),
+                'session_date_iso' => $s->session_date->format('Y-m-d'),
+                'teacher_name'  => $s->teacher?->name,
+                'attended'      => $att !== null,
+                'method'        => $att?->check_in_method->value,
+                'method_label'  => $att?->check_in_method->label(),
+                'checked_in_at' => $att?->checked_in_at->format('H:i'),
+            ];
+        });
+
+        return Inertia::render('Admin/AlunoDetalhe', [
+            'student' => [
+                'id'                    => $user->id,
+                'name'                  => $user->name,
+                'phone'                 => $user->phone,
+                'alt_contact'           => $user->alt_contact,
+                'grupo_homogeneo'       => $user->grupo_homogeneo?->value,
+                'grupo_homogeneo_label' => $user->grupo_homogeneo?->label(),
+                'classroom_id'          => $user->classroom_id,
+                'classroom_name'        => $user->classroom?->name,
+                'readiness'             => $user->readiness()->value,
+                'readiness_label'       => $user->readinessLabel(),
+            ],
+            'sessions' => $sessions,
+            'stats'    => ['attended' => $attendedAll, 'total' => $totalAll, 'rate' => $rate],
+            'filters'  => $request->only(['sort_by', 'sort_dir', 'per_page']),
         ]);
     }
 
@@ -77,7 +146,17 @@ class UsersController extends Controller
             $rules['password'] = 'required|string|min:8';
         }
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'name.required' => 'O nome é obrigatório.',
+            'email.required' => 'O email é obrigatório.',
+            'email.email' => 'O email não é válido.',
+            'email.unique' => 'Este email já está registado.',
+            'password.required' => 'A password é obrigatória.',
+            'password.min' => 'A password deve ter pelo menos 8 caracteres.',
+            'phone.required' => 'O número de telefone é obrigatório.',
+            'phone.unique' => 'Este número de telefone já está registado.',
+            'classroom_id.exists' => 'A turma selecionada não existe.',
+        ]);
 
         if (!$isStudent && isset($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
@@ -107,7 +186,14 @@ class UsersController extends Controller
             $rules['email'] = 'required|email|unique:users,email,' . $user->id;
         }
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'name.required' => 'O nome é obrigatório.',
+            'email.required' => 'O email é obrigatório.',
+            'email.email' => 'O email não é válido.',
+            'email.unique' => 'Este email já está registado.',
+            'phone.unique' => 'Este número de telefone já está registado.',
+            'classroom_id.exists' => 'A turma selecionada não existe.',
+        ]);
 
         if ($request->filled('password')) {
             $validated['password'] = Hash::make($request->password);

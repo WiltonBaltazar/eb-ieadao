@@ -21,13 +21,11 @@ class StudentAuthController extends Controller
         $request->validate(['phone' => 'required|string']);
 
         $user = User::where('phone', $request->phone)
-            ->where('role', 'student')
+            ->whereIn('role', ['student', 'teacher'])
             ->first();
 
         if (!$user) {
-            return back()->withErrors([
-                'phone' => 'Número não registado. Regista-te através do QR code de uma sessão.',
-            ]);
+            return redirect()->route('registration.general', ['phone' => $request->phone]);
         }
 
         Auth::login($user, $request->boolean('remember'));

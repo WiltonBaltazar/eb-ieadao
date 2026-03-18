@@ -36,13 +36,7 @@ export default function Entrar({ errors }: EntrarPageProps) {
               {errors?.phone && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {errors.phone}
-                    <br />
-                    <span className="text-xs mt-1 block opacity-80">
-                      Para te registares, pede ao teu líder o QR code de uma sessão.
-                    </span>
-                  </AlertDescription>
+                  <AlertDescription>{errors.phone}</AlertDescription>
                 </Alert>
               )}
 
@@ -64,7 +58,13 @@ export default function Entrar({ errors }: EntrarPageProps) {
               </Button>
             </form>
 
-            <div className="mt-4 text-center text-xs text-slate-500">
+            <div className="mt-4 space-y-1 text-center text-xs text-slate-500">
+              <p className='mb-4'>
+                É aluno e não tem conta?{' '}
+                <a href="/registar" className="text-slate-700 underline hover:no-underline">
+                  Registar
+                </a>
+              </p>
               <p>Administrador ou professor?{' '}
                 <a href="/login" className="text-slate-700 underline hover:no-underline">
                   Aceder aqui
