@@ -146,6 +146,7 @@ export default function MinhasPresencas({ attendances, stats, filters }: Props) 
                       <SortTh label="Data" column="session_date" filters={filters} />
                       <th className="text-left px-4 py-3 text-slate-500 font-medium text-xs hidden md:table-cell">Método</th>
                       <SortTh label="Check-in" column="checked_in_at" filters={filters} />
+                      <th className="px-4 py-3" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -158,6 +159,11 @@ export default function MinhasPresencas({ attendances, stats, filters }: Props) 
                         <td className="px-4 py-3 text-slate-500">{a.session_date}</td>
                         <td className="px-4 py-3 hidden md:table-cell">{methodBadge(a.method)}</td>
                         <td className="px-4 py-3 text-slate-500 text-xs">{a.checked_in_at}</td>
+                        <td className="px-4 py-3 text-right">
+                          <Button asChild size="sm" variant="outline" className="text-xs h-7">
+                            <Link href={a.session_url}>Ver Detalhes</Link>
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

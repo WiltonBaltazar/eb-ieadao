@@ -31,13 +31,14 @@ class StudentProfileController extends Controller
                 'method' => $a->check_in_method->value,
                 'method_label' => $a->check_in_method->label(),
                 'checked_in_at' => $a->checked_in_at->format('H:i'),
+                'session_url' => route('student.aula.show', $a->session),
             ]);
 
         $upcomingSessions = [];
         if ($user->classroom_id) {
             $upcomingSessions = StudySession::where('classroom_id', $user->classroom_id)
                 ->where('status', 'open')
-                ->with('classroom', 'resources')
+                ->with('classroom')
                 ->get()
                 ->map(fn ($s) => [
                     'id' => $s->id,
@@ -45,8 +46,7 @@ class StudentProfileController extends Controller
                     'session_date' => $s->session_date->format('d/m/Y'),
                     'classroom_name' => $s->classroom->name,
                     'check_in_url' => $s->checkInUrl(),
-                    'has_resources' => $s->resources->isNotEmpty(),
-                    'resources_url' => route('student.session.resources', $s),
+                    'session_url' => route('student.aula.show', $s),
                 ]);
         }
 
