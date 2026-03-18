@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/Components/ui/dropdown-menu';
-import { Home, BookOpen, User, LogOut, Menu } from 'lucide-react';
+import { Home, BookOpen, User, LogOut, Menu, GraduationCap } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/Components/ui/sheet';
 
 interface StudentLayoutProps {
@@ -23,6 +23,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
 
   const navLinks = [
     { href: '/meu-perfil', label: 'Início', icon: Home },
+    { href: '/minhas-aulas', label: 'Aulas', icon: GraduationCap },
     { href: '/minhas-presencas', label: 'Presenças', icon: BookOpen },
     { href: '/perfil/editar', label: 'Perfil', icon: User },
   ];

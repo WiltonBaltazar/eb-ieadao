@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\SessionQrController;
+use App\Http\Controllers\StudentAllSessionsController;
 use App\Http\Controllers\StudentAttendanceController;
 use App\Http\Controllers\StudentAuthController;
 use App\Http\Controllers\StudentProfileController;
@@ -42,6 +43,7 @@ require __DIR__.'/auth.php';
 Route::middleware(['role:student,teacher'])->group(function () {
     Route::get('/meu-perfil', [StudentProfileController::class, 'show'])->name('student.profile');
     Route::get('/minhas-presencas', [StudentAttendanceController::class, 'index'])->name('student.attendances');
+    Route::get('/minhas-aulas', [StudentAllSessionsController::class, 'index'])->name('student.all-sessions');
     Route::get('/perfil/editar', [StudentProfileController::class, 'edit'])->name('student.profile.edit');
     Route::put('/perfil/editar', [StudentProfileController::class, 'update'])->name('student.profile.update');
     Route::get('/aula/{studySession}', [StudentSessionResourcesController::class, 'show'])->name('student.aula.show');

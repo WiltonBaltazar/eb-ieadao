@@ -55,7 +55,7 @@ const statusColors: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
 };
 
-const PIE_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
+const PIE_COLORS = ['#1A1D6B', '#FF6700', '#F9AF0B', '#10b981', '#8b5cf6', '#06b6d4'];
 
 export default function Dashboard({
   stats,
@@ -77,77 +77,102 @@ export default function Dashboard({
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-6 relative">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Estudantes</p>
-                  <p className="text-2xl font-bold mt-1">{stats.total_students}</p>
+                  <p className="text-sm font-medium text-slate-500">Estudantes</p>
+                  <p className="text-3xl font-bold mt-1 tracking-tight text-slate-800">{stats.total_students}</p>
                 </div>
-                <Users className="h-8 w-8 text-slate-300" />
+                <div className="h-12 w-12 rounded-full bg-brand-primary/10 flex items-center justify-center shrink-0">
+                  <Users className="h-6 w-6 text-brand-primary" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+
+          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-6 relative">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Turmas Ativas</p>
-                  <p className="text-2xl font-bold mt-1">{stats.total_classrooms}</p>
+                  <p className="text-sm font-medium text-slate-500">Turmas Ativas</p>
+                  <p className="text-3xl font-bold mt-1 tracking-tight text-slate-800">{stats.total_classrooms}</p>
                 </div>
-                <BookOpen className="h-8 w-8 text-slate-300" />
+                <div className="h-12 w-12 rounded-full bg-brand-accent/10 flex items-center justify-center shrink-0">
+                  <BookOpen className="h-6 w-6 text-brand-accent" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+
+          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-yellow/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-6 relative">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Sessões</p>
-                  <p className="text-2xl font-bold mt-1">{stats.total_sessions}</p>
+                  <p className="text-sm font-medium text-slate-500">Sessões</p>
+                  <p className="text-3xl font-bold mt-1 tracking-tight text-slate-800">{stats.total_sessions}</p>
                 </div>
-                <CalendarDays className="h-8 w-8 text-slate-300" />
+                <div className="h-12 w-12 rounded-full bg-brand-yellow/10 flex items-center justify-center shrink-0">
+                  <CalendarDays className="h-6 w-6 text-brand-yellow" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+
+          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-6 relative">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Abertas Agora</p>
-                  <p className="text-2xl font-bold mt-1 text-green-600">{stats.open_sessions}</p>
+                  <p className="text-sm font-medium text-slate-500">Abertas Agora</p>
+                  <p className="text-3xl font-bold mt-1 tracking-tight text-green-600">{stats.open_sessions}</p>
                 </div>
-                <Activity className="h-8 w-8 text-green-200" />
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                  <Activity className="h-6 w-6 text-green-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+
+          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-6 relative">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">Assiduidade Média</p>
-                  <p className="text-2xl font-bold mt-1">{stats.avg_attendance}%</p>
+                  <p className="text-sm font-medium text-slate-500">Assiduidade</p>
+                  <p className="text-3xl font-bold mt-1 tracking-tight text-slate-800">{stats.avg_attendance}%</p>
                 </div>
-                <Percent className="h-8 w-8 text-slate-300" />
+                <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                  <Percent className="h-6 w-6 text-slate-500" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Month trend card */}
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="transition-all duration-300 hover:shadow-md border-slate-200/60 overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardContent className="pt-6 relative">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Presenças Este Mês</p>
-                <p className="text-3xl font-bold mt-1">{stats.this_month_attendances}</p>
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-full bg-brand-primary/10 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-7 w-7 text-brand-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Presenças Este Mês</p>
+                  <p className="text-4xl font-bold mt-1 tracking-tight text-slate-800">{stats.this_month_attendances}</p>
+                </div>
               </div>
               <div className="text-right">
-                <div className={`flex items-center gap-1 text-sm font-medium ${stats.month_trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold ${stats.month_trend >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {stats.month_trend >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                   {stats.month_trend >= 0 ? '+' : ''}{stats.month_trend}%
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">vs. mês anterior</p>
+                <p className="text-xs font-medium text-slate-400 mt-2 tracking-wide uppercase">vs. mês anterior</p>
               </div>
             </div>
           </CardContent>
@@ -230,9 +255,9 @@ export default function Dashboard({
               {recentSessions.length === 0 ? (
                 <p className="px-6 py-4 text-sm text-slate-500">Nenhuma sessão encontrada.</p>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100/60">
                   {recentSessions.map((s) => (
-                    <div key={s.id} className="px-6 py-3 flex items-center gap-3">
+                    <div key={s.id} className="px-6 py-4 flex items-center gap-3 hover:bg-slate-50/80 transition-colors cursor-pointer group">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-800 truncate">{s.title}</p>
                         <p className="text-xs text-slate-500">{s.session_date} · {s.classroom_name}</p>
@@ -251,7 +276,7 @@ export default function Dashboard({
           {/* Top Attendance */}
           <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-base text-green-700">
+              <CardTitle className="text-base text-brand-primary">
                 Melhores Presenças (acima de {threshold}%)
               </CardTitle>
               <Link
@@ -265,9 +290,9 @@ export default function Dashboard({
               {topAttendance.length === 0 ? (
                 <p className="px-6 py-4 text-sm text-slate-500">Nenhum estudante acima do limiar.</p>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100/60">
                   {topAttendance.map((s, i) => (
-                    <div key={s.id} className="px-6 py-3 flex items-center gap-3">
+                    <div key={s.id} className="px-6 py-4 flex items-center gap-3 hover:bg-slate-50/80 transition-colors group">
                       <span className="text-xs font-mono text-slate-400 w-4">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-800 truncate">{s.name}</p>
