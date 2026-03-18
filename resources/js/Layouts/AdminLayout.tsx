@@ -56,15 +56,15 @@ function NavLink({ href, label, icon: Icon, collapsed, exact }: {
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm',
+        'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium',
         isActive
-          ? 'bg-slate-800 text-white'
-          : 'text-slate-300 hover:bg-slate-700 hover:text-white',
+          ? 'bg-brand-accent text-white shadow-md shadow-brand-accent/20'
+          : 'text-white/70 hover:bg-white/10 hover:text-white',
         collapsed && 'justify-center px-2'
       )}
       title={collapsed ? label : undefined}
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-white/70")} />
       {!collapsed && <span>{label}</span>}
     </Link>
   );
@@ -82,40 +82,45 @@ export default function AdminLayout({ children, breadcrumbs }: AdminLayoutProps)
     <div className="min-h-screen flex bg-slate-50">
       {/* Sidebar — desktop */}
       <aside className={cn(
-        'hidden md:flex flex-col bg-slate-900 transition-all duration-300',
-        collapsed ? 'w-16' : 'w-56'
+        'hidden md:flex flex-col bg-brand-primary transition-all duration-300 z-20 shadow-xl',
+        collapsed ? 'w-20' : 'w-64'
       )}>
         <div className={cn(
-          'h-14 flex items-center border-b border-slate-700 px-4',
+          'h-16 flex items-center border-b border-white/10 px-4',
           collapsed ? 'justify-center' : 'justify-between'
         )}>
           {!collapsed && (
-            <span className="text-white font-semibold text-sm truncate">IEADAO</span>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded bg-brand-accent flex items-center justify-center shadow-lg shadow-brand-accent/20">
+                <span className="text-white font-bold text-xs">IE</span>
+              </div>
+              <span className="text-white font-bold text-lg tracking-tight truncate">IEADAO</span>
+            </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="text-slate-400 hover:text-white p-1 rounded"
+            className="text-white/50 hover:text-white p-1.5 rounded-md hover:bg-white/10 transition-colors"
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         </div>
 
-        <nav className="flex-1 py-4 px-2 flex flex-col gap-1">
+        <nav className="flex-1 py-6 px-3 flex flex-col gap-1.5">
           {navItems.map((item) => (
             <NavLink key={item.href} {...item} collapsed={collapsed} />
           ))}
         </nav>
 
-        <div className="p-2 border-t border-slate-700">
+        <div className="p-3 border-t border-white/10">
           <button
             onClick={handleLogout}
             className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-700 hover:text-white transition-colors w-full text-sm',
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all w-full text-sm font-medium',
               collapsed && 'justify-center px-2'
             )}
             title={collapsed ? 'Sair' : undefined}
           >
-            <LogOut className="h-5 w-5 shrink-0" />
+            <LogOut className="h-5 w-5 shrink-0 text-white/70" />
             {!collapsed && <span>Sair</span>}
           </button>
         </div>
@@ -124,7 +129,7 @@ export default function AdminLayout({ children, breadcrumbs }: AdminLayoutProps)
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 gap-3 sticky top-0 z-40">
+        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center px-6 gap-4 sticky top-0 z-40 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.02)]">
           {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild>
@@ -132,11 +137,14 @@ export default function AdminLayout({ children, breadcrumbs }: AdminLayoutProps)
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 bg-slate-900 p-0">
-              <div className="h-14 flex items-center px-4 border-b border-slate-700">
-                <span className="text-white font-semibold">IEADAO</span>
+            <SheetContent side="left" className="w-64 bg-brand-primary p-0 border-r-0">
+              <div className="h-16 flex items-center px-6 border-b border-white/10 gap-3">
+                <div className="h-8 w-8 rounded bg-brand-accent flex items-center justify-center shadow-lg shadow-brand-accent/20">
+                  <span className="text-white font-bold text-xs">IE</span>
+                </div>
+                <span className="text-white font-bold tracking-tight">IEADAO</span>
               </div>
-              <nav className="py-4 px-2 flex flex-col gap-1">
+              <nav className="py-6 px-3 flex flex-col gap-1.5">
                 {navItems.map((item) => (
                   <NavLink key={item.href} {...item} />
                 ))}

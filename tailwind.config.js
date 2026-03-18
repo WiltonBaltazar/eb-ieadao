@@ -24,6 +24,12 @@ export default {
                 sm: 'calc(var(--radius) - 4px)',
             },
             colors: {
+                brand: {
+                    primary: '#1A1D6B',
+                    accent: '#FF6700',
+                    yellow: '#F9AF0B',
+                    white: '#FFFFFF',
+                },
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',
                 card: {

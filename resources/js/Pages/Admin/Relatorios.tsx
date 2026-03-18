@@ -185,8 +185,9 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
             </Card>
 
             {/* Chart */}
-            <Card>
-              <CardHeader>
+            <Card className="transition-all duration-300 hover:shadow-md border-slate-200/60 relative group">
+              <div className="absolute inset-0 bg-gradient-to-t from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-xl" />
+              <CardHeader className="relative">
                 <CardTitle className="text-base">
                   Presenças por Dia
                   {classroomId !== 'all' && (
@@ -221,9 +222,9 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
                         }}
                       />
                       {hasPrevious && <Legend />}
-                      <Bar dataKey="Presenças" fill="#6366f1" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="Presenças" fill="#1A1D6B" radius={[4, 4, 0, 0]} />
                       {hasPrevious && (
-                        <Bar dataKey="Período anterior" fill="#c7d2fe" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="Período anterior" fill="#F9AF0B" radius={[4, 4, 0, 0]} />
                       )}
                     </BarChart>
                   </ResponsiveContainer>
@@ -252,9 +253,9 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
 
           {/* Acompanhamento */}
           <TabsContent value="acompanhamento" className="space-y-3">
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-md border-slate-200/60">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2 text-amber-700">
+                <CardTitle className="text-base flex items-center gap-2 text-brand-accent">
                   <AlertTriangle className="h-5 w-5" />
                   Estudantes Abaixo de {threshold}%
                 </CardTitle>
@@ -263,15 +264,15 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
                 {belowThreshold.length === 0 ? (
                   <p className="px-6 py-4 text-sm text-slate-500">Todos os estudantes estão acima do limiar!</p>
                 ) : (
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-slate-100/60">
                     {belowThreshold.map((s) => (
-                      <div key={s.id} className="px-6 py-3 flex items-center gap-3">
+                      <div key={s.id} className="px-6 py-4 flex items-center gap-3 hover:bg-slate-50/80 transition-colors group">
                         <div className="flex-1">
-                          <p className="font-medium text-sm">{s.name}</p>
+                          <p className="font-medium text-sm text-slate-800">{s.name}</p>
                           <p className="text-xs text-slate-500">{s.classroom_name} · {s.phone}</p>
                         </div>
                         <div className="text-right">
-                          <Badge className="bg-amber-100 text-amber-800">{s.rate}%</Badge>
+                          <Badge className="bg-brand-accent/10 text-brand-accent border-0 font-semibold">{s.rate}%</Badge>
                           <p className="text-xs text-slate-400 mt-1">{s.attended}/{s.total} sessões</p>
                         </div>
                       </div>
@@ -286,7 +287,8 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
           <TabsContent value="por-turma">
             <div className="grid gap-3 md:grid-cols-2">
               {byClassroom.map((c) => (
-                <Card key={c.id}>
+                <Card key={c.id} className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
                       {c.name}
@@ -299,7 +301,7 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
                       </a>
                     </Button>
                   </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
+                  <CardContent className="space-y-2 text-sm relative">
                     <div className="flex justify-between">
                       <span className="text-slate-500">Estudantes</span>
                       <span className="font-medium">{c.students_count}</span>

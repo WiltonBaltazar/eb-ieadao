@@ -4,7 +4,7 @@ import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Progress } from '@/Components/ui/progress';
-import { Calendar, CheckCircle2, ChevronRight, Edit2, ExternalLink, QrCode } from 'lucide-react';
+import { Calendar, CheckCircle2, ChevronRight, Edit2, ExternalLink, GraduationCap, QrCode } from 'lucide-react';
 import { MeuPerfilPageProps } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 
@@ -137,12 +137,18 @@ export default function MeuPerfil({ student, stats, lastAttendances, upcomingSes
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">
           <Button asChild variant="outline" className="h-12">
+            <Link href="/minhas-aulas">
+              <GraduationCap className="mr-2 h-4 w-4" />
+              Todas as Aulas
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="h-12">
             <Link href="/minhas-presencas">
               <Calendar className="mr-2 h-4 w-4" />
               Histórico
             </Link>
           </Button>
-          <Button asChild variant="outline" className="h-12">
+          <Button asChild variant="outline" className="h-12 col-span-2">
             <Link href="/perfil/editar">
               <Edit2 className="mr-2 h-4 w-4" />
               Editar Perfil
