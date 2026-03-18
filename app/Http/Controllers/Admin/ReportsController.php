@@ -218,9 +218,13 @@ class ReportsController extends Controller
             ->whereIn('status', ['open', 'closed'])
             ->count();
 
+        $sessionIds = StudySession::where('classroom_id', $classroom->id)
+            ->whereIn('status', ['open', 'closed'])
+            ->pluck('id');
+
         $students = User::where('classroom_id', $classroom->id)
             ->where('role', 'student')
-            ->with('attendances')
+            ->with(['attendances' => fn ($q) => $q->whereIn('study_session_id', $sessionIds)])
             ->orderBy('name')
             ->get()
             ->map(function ($s) use ($totalSessions) {
