@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ClassroomsController;
+use App\Http\Controllers\Admin\LessonResourcesController;
 use App\Http\Controllers\Admin\StudentsController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ReportsController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\SessionQrController;
 use App\Http\Controllers\StudentAttendanceController;
 use App\Http\Controllers\StudentAuthController;
 use App\Http\Controllers\StudentProfileController;
+use App\Http\Controllers\StudentSessionResourcesController;
 use Illuminate\Support\Facades\Route;
 
 // Root redirect
@@ -42,6 +44,7 @@ Route::middleware(['role:student,teacher'])->group(function () {
     Route::get('/minhas-presencas', [StudentAttendanceController::class, 'index'])->name('student.attendances');
     Route::get('/perfil/editar', [StudentProfileController::class, 'edit'])->name('student.profile.edit');
     Route::put('/perfil/editar', [StudentProfileController::class, 'update'])->name('student.profile.update');
+    Route::get('/sessao/{studySession}/recursos', [StudentSessionResourcesController::class, 'show'])->name('student.session.resources');
 });
 
 // Admin/Teacher Routes
@@ -88,6 +91,11 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::post('/sessoes/{studySession}/registar-e-marcar', [StudySessionsController::class, 'registerAndMark'])->name('admin.sessions.register-and-mark');
     Route::post('/presencas/bulk-destroy', [StudySessionsController::class, 'bulkDestroyAttendances'])->name('admin.attendances.bulk-destroy');
     Route::delete('/presencas/{attendance}', [StudySessionsController::class, 'removeAttendance'])->name('admin.attendances.destroy');
+
+    // Lesson Resources
+    Route::post('/sessoes/{studySession}/recursos', [LessonResourcesController::class, 'store'])->name('admin.resources.store');
+    Route::delete('/recursos/{resource}', [LessonResourcesController::class, 'destroy'])->name('admin.resources.destroy');
+    Route::get('/recursos/{resource}/download', [LessonResourcesController::class, 'download'])->name('admin.resources.download');
 
     // Reports
     Route::get('/relatorios', [ReportsController::class, 'index'])->name('admin.reports.index');
