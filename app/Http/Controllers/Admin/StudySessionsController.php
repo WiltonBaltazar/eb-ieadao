@@ -177,7 +177,7 @@ class StudySessionsController extends Controller
 
     public function attendance(Request $request, StudySession $studySession): Response
     {
-        $studySession->load('classroom', 'teacher');
+        $studySession->load('classroom', 'teacher', 'resources');
 
         // Students who attended
         $attendedQuery = Attendance::where('study_session_id', $studySession->id)
@@ -248,6 +248,17 @@ class StudySessionsController extends Controller
                 'role'  => $u->role->value,
             ]);
 
+        $resources = $studySession->resources->map(fn ($r) => [
+            'id'                => $r->id,
+            'type'              => $r->type,
+            'title'             => $r->title,
+            'url'               => $r->url,
+            'original_filename' => $r->original_filename,
+            'download_url'      => $r->type === 'file'
+                ? route('admin.resources.download', $r)
+                : $r->url,
+        ]);
+
         return Inertia::render('Admin/SessaoPresencas', [
             'studySession' => [
                 'id'             => $studySession->id,
@@ -259,6 +270,7 @@ class StudySessionsController extends Controller
                 'classroom_name' => $studySession->classroom->name,
                 'teacher_name'   => $studySession->teacher?->name,
             ],
+            'resources' => $resources,
             'attended'      => $attended,
             'notAttended'   => $notAttended,
             'gruposOptions' => collect(GrupoHomogeneo::cases())

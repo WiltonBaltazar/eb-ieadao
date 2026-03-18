@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { FormEventHandler, useState, useMemo } from 'react';
+import { FormEventHandler, useState, useMemo, useRef } from 'react';
 import { useBulkSelect } from '@/hooks/useBulkSelect';
 import BulkActionBar from '@/Components/BulkActionBar';
 import AdminLayout from '@/Layouts/AdminLayout';
@@ -30,8 +30,12 @@ import {
   AlertCircle,
   Trash2,
   FileSpreadsheet,
+  FileText,
+  Link2,
+  Upload,
+  Plus,
 } from 'lucide-react';
-import { PageProps, PaginatedData } from '@/types';
+import { LessonResource, PageProps, PaginatedData } from '@/types';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
 
 interface AttendedRow {
@@ -68,6 +72,7 @@ interface Props extends PageProps {
   };
   attended: PaginatedData<AttendedRow>;
   notAttended: NotAttendedRow[];
+  resources: LessonResource[];
   gruposOptions: Array<{ value: string; label: string }>;
   filters: { search?: string; grupo_homogeneo?: string; sort_by?: string; sort_dir?: string; per_page?: string };
 }
@@ -89,6 +94,7 @@ export default function SessaoPresencas({
   studySession,
   attended,
   notAttended,
+  resources,
   gruposOptions,
   filters,
 }: Props) {
@@ -183,6 +189,72 @@ export default function SessaoPresencas({
       router.delete(`/admin/presencas/${attendanceId}`, {
         preserveScroll: true,
       });
+    }
+  };
+
+  // ── Resources ──
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showPdfForm, setShowPdfForm] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfTitle, setPdfTitle] = useState('');
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfError, setPdfError] = useState('');
+
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const linkForm = useForm({ type: 'link', title: '', url: '' });
+
+  const openPdfForm = () => {
+    setPdfFile(null);
+    setPdfTitle('');
+    setPdfError('');
+    setShowPdfForm(true);
+    setShowLinkForm(false);
+  };
+
+  const handlePdfFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setPdfFile(file);
+    setPdfError('');
+    if (file && !pdfTitle) setPdfTitle(file.name.replace(/\.pdf$/i, ''));
+  };
+
+  const handlePdfSubmit: FormEventHandler = (e) => {
+    e.preventDefault();
+    if (!pdfFile) return;
+    setPdfError('');
+    setPdfUploading(true);
+    router.post(
+      `/admin/sessoes/${studySession.id}/recursos`,
+      { type: 'file', title: pdfTitle || pdfFile.name, file: pdfFile },
+      {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+          setShowPdfForm(false);
+          setPdfFile(null);
+          setPdfTitle('');
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        },
+        onError: (errs) => setPdfError(errs.file ?? errs.title ?? 'Erro ao carregar o ficheiro.'),
+        onFinish: () => setPdfUploading(false),
+      },
+    );
+  };
+
+  const handleAddLink: FormEventHandler = (e) => {
+    e.preventDefault();
+    linkForm.post(`/admin/sessoes/${studySession.id}/recursos`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        linkForm.reset();
+        setShowLinkForm(false);
+      },
+    });
+  };
+
+  const handleDeleteResource = (resourceId: number, title: string) => {
+    if (confirm(`Eliminar recurso "${title}"?`)) {
+      router.delete(`/admin/recursos/${resourceId}`, { preserveScroll: true });
     }
   };
 
@@ -447,6 +519,182 @@ export default function SessaoPresencas({
                   </form>
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Resources Card ── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-indigo-500" />
+              Recursos da Aula
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Existing resources */}
+            {resources.length > 0 && (
+              <div className="space-y-1">
+                {resources.map((r) => (
+                  <div key={r.id} className="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0">
+                    {r.type === 'file'
+                      ? <FileText className="h-4 w-4 text-red-400 shrink-0" />
+                      : <Link2 className="h-4 w-4 text-blue-400 shrink-0" />
+                    }
+                    <a
+                      href={r.download_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 text-sm text-slate-700 hover:text-indigo-600 truncate"
+                    >
+                      {r.title}
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-1.5 text-red-400 hover:text-red-600 shrink-0"
+                      onClick={() => handleDeleteResource(r.id, r.title)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {resources.length === 0 && !showPdfForm && !showLinkForm && (
+              <p className="text-sm text-slate-400">Nenhum recurso adicionado.</p>
+            )}
+
+            {/* PDF form */}
+            {showPdfForm && (
+              <form onSubmit={handlePdfSubmit} className="space-y-2 border border-slate-200 rounded-md p-3 bg-slate-50">
+                <p className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                  <Upload className="h-3.5 w-3.5" /> Adicionar PDF
+                </p>
+                {pdfError && (
+                  <Alert variant="destructive" className="py-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">{pdfError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="grid sm:grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Título</Label>
+                    <Input
+                      placeholder="Ex: Slides da aula"
+                      value={pdfTitle}
+                      onChange={(e) => setPdfTitle(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Ficheiro PDF *</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={handlePdfFileChange}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs flex-1 justify-start font-normal"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {pdfFile ? pdfFile.name : 'Escolher ficheiro…'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" className="text-xs" disabled={!pdfFile || pdfUploading}>
+                    {pdfUploading ? 'A carregar…' : 'Carregar PDF'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => { setShowPdfForm(false); setPdfFile(null); setPdfTitle(''); }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Link form */}
+            {showLinkForm && (
+              <form onSubmit={handleAddLink} className="space-y-2 border border-slate-200 rounded-md p-3 bg-slate-50">
+                <p className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5" /> Adicionar Link
+                </p>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Título</Label>
+                    <Input
+                      placeholder="Ex: Vídeo da aula"
+                      value={linkForm.data.title}
+                      onChange={(e) => linkForm.setData('title', e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">URL *</Label>
+                    <Input
+                      placeholder="https://…"
+                      value={linkForm.data.url}
+                      onChange={(e) => linkForm.setData('url', e.target.value)}
+                      className={`h-8 text-sm ${linkForm.errors.url ? 'border-red-500' : ''}`}
+                    />
+                    {linkForm.errors.url && (
+                      <p className="text-xs text-red-600">{linkForm.errors.url}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" className="text-xs" disabled={linkForm.processing}>
+                    {linkForm.processing ? 'A guardar…' : 'Guardar'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => { setShowLinkForm(false); linkForm.reset(); }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Action buttons */}
+            {!showPdfForm && !showLinkForm && (
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs gap-1.5"
+                  onClick={openPdfForm}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Adicionar PDF
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs gap-1.5"
+                  onClick={() => { setShowLinkForm(true); setShowPdfForm(false); }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar Link
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

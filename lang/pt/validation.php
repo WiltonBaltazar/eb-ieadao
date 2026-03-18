@@ -32,6 +32,9 @@ return [
     'required' => 'O campo :attribute é obrigatório.',
     'string' => 'O campo :attribute deve ser texto.',
     'unique' => 'O valor do campo :attribute já está em uso.',
+    'file' => 'O campo :attribute deve ser um ficheiro.',
+    'mimes' => 'O campo :attribute deve ser um ficheiro do tipo: :values.',
+    'uploaded' => 'O ficheiro é demasiado grande ou ocorreu um erro no envio. Verifique o tamanho do ficheiro e tente novamente.',
     'url' => 'O campo :attribute deve ser um URL válido.',
 
     'attributes' => [
@@ -53,5 +56,7 @@ return [
         'meeting_time' => 'hora de reunião',
         'code' => 'código',
         'student_id' => 'aluno',
+        'file' => 'ficheiro',
+        'url' => 'URL',
     ],
 ];

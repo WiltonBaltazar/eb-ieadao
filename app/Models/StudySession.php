@@ -44,6 +44,11 @@ class StudySession extends Model
         return $this->hasMany(Attendance::class);
     }
 
+    public function resources(): HasMany
+    {
+        return $this->hasMany(LessonResource::class);
+    }
+
     public function isOpen(): bool
     {
         return $this->status === StudySessionStatus::Open;

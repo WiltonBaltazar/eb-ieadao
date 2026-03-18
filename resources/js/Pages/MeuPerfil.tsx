@@ -4,7 +4,7 @@ import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Progress } from '@/Components/ui/progress';
-import { Calendar, CheckCircle2, ChevronRight, Edit2, ExternalLink, QrCode } from 'lucide-react';
+import { BookOpen, Calendar, CheckCircle2, ChevronRight, Edit2, ExternalLink, QrCode } from 'lucide-react';
 import { MeuPerfilPageProps } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 
@@ -71,17 +71,27 @@ export default function MeuPerfil({ student, stats, lastAttendances, upcomingSes
             </CardHeader>
             <CardContent className="space-y-2">
               {upcomingSessions.map((session) => (
-                <div key={session.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{session.title}</p>
+                <div key={session.id} className="flex items-center justify-between gap-2 py-2 border-b border-slate-100 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{session.title}</p>
                     <p className="text-xs text-slate-500">{session.session_date}</p>
                   </div>
-                  <Button asChild size="sm" variant="outline" className="text-xs">
-                    <a href={session.check_in_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Check-in
-                    </a>
-                  </Button>
+                  <div className="flex gap-1.5 shrink-0">
+                    {session.has_resources && (
+                      <Button asChild size="sm" variant="outline" className="text-xs">
+                        <Link href={session.resources_url}>
+                          <BookOpen className="h-3 w-3 mr-1" />
+                          Recursos
+                        </Link>
+                      </Button>
+                    )}
+                    <Button asChild size="sm" variant="outline" className="text-xs">
+                      <a href={session.check_in_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Check-in
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>

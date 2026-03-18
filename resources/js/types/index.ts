@@ -37,6 +37,15 @@ export interface StudySession {
   check_in_code_expires_at: string | null;
 }
 
+export interface LessonResource {
+  id: number;
+  type: 'file' | 'link';
+  title: string;
+  url: string | null;
+  original_filename: string | null;
+  download_url: string;
+}
+
 export interface AttendanceRecord {
   id: number;
   session_title: string;
@@ -114,6 +123,8 @@ export interface MeuPerfilPageProps extends PageProps {
     session_date: string;
     classroom_name: string;
     check_in_url: string;
+    has_resources: boolean;
+    resources_url: string;
   }>;
 }
 
