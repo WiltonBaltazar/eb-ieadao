@@ -1,5 +1,7 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler, useState, useMemo } from 'react';
+import { useBulkSelect } from '@/hooks/useBulkSelect';
+import BulkActionBar from '@/Components/BulkActionBar';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
@@ -96,7 +98,17 @@ export default function SessaoPresencas({
   const [tableSearch, setTableSearch] = useState(filters.search ?? '');
   const hasFilters = !!(filters.search || filters.grupo_homogeneo);
   const basePath = `/admin/sessoes/${studySession.id}/presencas`;
-  const { handleSort, handlePerPage } = useTableNav(basePath, filters);
+  const { handleSort: baseHandleSort, handlePerPage: baseHandlePerPage } = useTableNav(basePath, filters);
+  const { selectedIds, selectedCount, isAllSelected, isIndeterminate, isSelected, toggleOne, toggleAll, clearSelection } = useBulkSelect(attended.data);
+
+  const handleSort = (col: string, dir: string) => { clearSelection(); baseHandleSort(col, dir); };
+  const handlePerPage = (n: number) => { clearSelection(); baseHandlePerPage(n); };
+
+  const handleBulkDelete = () => {
+    router.post('/admin/presencas/bulk-destroy', { ids: selectedIds }, {
+      onSuccess: () => clearSelection(),
+    });
+  };
 
   const applyFilter = (key: string, value: string) => {
     router.get(
@@ -501,6 +513,14 @@ export default function SessaoPresencas({
           </CardHeader>
 
           <CardContent className="px-0 pb-0">
+            <BulkActionBar
+              selectedCount={selectedCount}
+              totalOnPage={attended.data.length}
+              label="presenças"
+              onConfirmDelete={handleBulkDelete}
+              onClear={clearSelection}
+              onSelectAll={toggleAll}
+            />
             {attended.data.length === 0 ? (
               <div className="py-12 text-center text-slate-400">
                 <Users className="h-10 w-10 mx-auto mb-3 opacity-25" />
@@ -515,6 +535,15 @@ export default function SessaoPresencas({
                   <table className="w-full text-sm">
                     <thead className="border-b border-slate-100 bg-slate-50/50">
                       <tr>
+                        <th className="w-10 px-4 py-2.5">
+                          <input
+                            type="checkbox"
+                            checked={isAllSelected}
+                            ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
+                            onChange={toggleAll}
+                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
+                          />
+                        </th>
                         <SortableTh label="Aluno" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6 py-2.5" />
                         <SortableTh label="Telefone" column="phone" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
                         <th className="text-left px-4 py-2.5 font-medium text-slate-500">Grupo</th>
@@ -526,7 +555,15 @@ export default function SessaoPresencas({
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {attended.data.map((a) => (
-                        <tr key={a.id} className="hover:bg-slate-50/60">
+                        <tr key={a.id} className={isSelected(a.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50/60'}>
+                          <td className="w-10 px-4 py-2.5">
+                            <input
+                              type="checkbox"
+                              checked={isSelected(a.id)}
+                              onChange={() => toggleOne(a.id)}
+                              className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
                           <td className="px-6 py-2.5 font-medium text-slate-800">
                             {a.name}
                             {a.role === 'teacher' && (
@@ -589,7 +626,13 @@ export default function SessaoPresencas({
                 {/* Mobile */}
                 <div className="md:hidden divide-y divide-slate-100">
                   {attended.data.map((a) => (
-                    <div key={a.id} className="px-4 py-3 flex items-center gap-3">
+                    <div key={a.id} className={`px-4 py-3 flex items-center gap-3 ${isSelected(a.id) ? 'bg-blue-50/40' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected(a.id)}
+                        onChange={() => toggleOne(a.id)}
+                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer shrink-0"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-slate-800 truncate">
                           {a.name}

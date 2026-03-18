@@ -55,6 +55,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     // Users
     Route::get('/utilizadores', [UsersController::class, 'index'])->name('admin.users.index');
     Route::post('/utilizadores', [UsersController::class, 'store'])->name('admin.users.store');
+    Route::post('/utilizadores/bulk-destroy', [UsersController::class, 'bulkDestroy'])->name('admin.users.bulk-destroy');
     Route::get('/utilizadores/{user}', [UsersController::class, 'show'])->name('admin.users.show');
     Route::put('/utilizadores/{user}', [UsersController::class, 'update'])->name('admin.users.update');
     Route::delete('/utilizadores/{user}', [UsersController::class, 'destroy'])->name('admin.users.destroy');
@@ -62,6 +63,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     // Classrooms
     Route::get('/turmas', [ClassroomsController::class, 'index'])->name('admin.classrooms.index');
     Route::post('/turmas', [ClassroomsController::class, 'store'])->name('admin.classrooms.store');
+    Route::post('/turmas/bulk-destroy', [ClassroomsController::class, 'bulkDestroy'])->name('admin.classrooms.bulk-destroy');
     Route::put('/turmas/{classroom}', [ClassroomsController::class, 'update'])->name('admin.classrooms.update');
     Route::delete('/turmas/{classroom}', [ClassroomsController::class, 'destroy'])->name('admin.classrooms.destroy');
     Route::get('/turmas/{classroom}/alunos', [ClassroomsController::class, 'students'])->name('admin.classrooms.students');
@@ -69,6 +71,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     // Study Sessions
     Route::get('/sessoes', [StudySessionsController::class, 'index'])->name('admin.sessions.index');
     Route::post('/sessoes', [StudySessionsController::class, 'store'])->name('admin.sessions.store');
+    Route::post('/sessoes/bulk-destroy', [StudySessionsController::class, 'bulkDestroy'])->name('admin.sessions.bulk-destroy');
     Route::put('/sessoes/{studySession}', [StudySessionsController::class, 'update'])->name('admin.sessions.update');
     Route::delete('/sessoes/{studySession}', [StudySessionsController::class, 'destroy'])->name('admin.sessions.destroy');
     Route::post('/sessoes/{studySession}/abrir', [StudySessionsController::class, 'open'])->name('admin.sessions.open');
@@ -78,6 +81,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::get('/sessoes/{studySession}/presencas', [StudySessionsController::class, 'attendance'])->name('admin.sessions.attendance');
     Route::get('/sessoes/{studySession}/exportar-excel', [StudySessionsController::class, 'exportExcel'])->name('admin.sessions.export-excel');
     Route::post('/sessoes/{studySession}/registar-e-marcar', [StudySessionsController::class, 'registerAndMark'])->name('admin.sessions.register-and-mark');
+    Route::post('/presencas/bulk-destroy', [StudySessionsController::class, 'bulkDestroyAttendances'])->name('admin.attendances.bulk-destroy');
     Route::delete('/presencas/{attendance}', [StudySessionsController::class, 'removeAttendance'])->name('admin.attendances.destroy');
 
     // Reports

@@ -1,5 +1,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import { useBulkSelect } from '@/hooks/useBulkSelect';
+import BulkActionBar from '@/Components/BulkActionBar';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -126,7 +128,17 @@ export default function Turmas({ classrooms, teachers, filters, errors }: Props)
   const [search, setSearch] = useState(filters.search ?? '');
   const [showCreate, setShowCreate] = useState(false);
   const [editItem, setEditItem] = useState<ClassroomRow | null>(null);
-  const { handleSort, handlePerPage } = useTableNav('/admin/turmas', filters);
+  const { handleSort: baseHandleSort, handlePerPage: baseHandlePerPage } = useTableNav('/admin/turmas', filters);
+  const { selectedIds, selectedCount, isAllSelected, isIndeterminate, isSelected, toggleOne, toggleAll, clearSelection } = useBulkSelect(classrooms.data);
+
+  const handleSort = (col: string, dir: string) => { clearSelection(); baseHandleSort(col, dir); };
+  const handlePerPage = (n: number) => { clearSelection(); baseHandlePerPage(n); };
+
+  const handleBulkDelete = () => {
+    router.post('/admin/turmas/bulk-destroy', { ids: selectedIds }, {
+      onSuccess: () => clearSelection(),
+    });
+  };
 
   const handleSearch = () => {
     router.get('/admin/turmas', { ...filters, search }, { preserveState: true });
@@ -246,10 +258,27 @@ export default function Turmas({ classrooms, teachers, filters, errors }: Props)
         {/* Table */}
         <Card>
           <CardContent className="px-0 pt-0">
+            <BulkActionBar
+              selectedCount={selectedCount}
+              totalOnPage={classrooms.data.length}
+              label="turmas"
+              onConfirmDelete={handleBulkDelete}
+              onClear={clearSelection}
+              onSelectAll={toggleAll}
+            />
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-slate-100">
                   <tr>
+                    <th className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
+                        onChange={toggleAll}
+                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </th>
                     <SortableTh label="Nome" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />
                     <th className="text-left px-4 py-3 text-slate-500 font-medium hidden md:table-cell">Professores</th>
                     <SortableTh label="Dia" column="meeting_day" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="hidden lg:table-cell" />
@@ -260,7 +289,15 @@ export default function Turmas({ classrooms, teachers, filters, errors }: Props)
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {classrooms.data.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50">
+                    <tr key={c.id} className={isSelected(c.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50'}>
+                      <td className="w-10 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected(c.id)}
+                          onChange={() => toggleOne(c.id)}
+                          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-6 py-3">
                         <div>
                           <span className="font-medium">{c.name}</span>

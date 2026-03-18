@@ -101,6 +101,13 @@ class ClassroomsController extends Controller
         return back()->with('success', 'Turma eliminada.');
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer|exists:classrooms,id']);
+        Classroom::whereIn('id', $request->ids)->delete();
+        return back()->with('success', count($request->ids) . ' turma(s) eliminada(s).');
+    }
+
     public function students(Request $request, Classroom $classroom): Response
     {
         $classroom->load('teachers');

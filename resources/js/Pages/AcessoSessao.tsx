@@ -1,4 +1,4 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler, useEffect, useState } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Button } from '@/Components/ui/button';
@@ -139,6 +139,11 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
             </CardContent>
           </Card>
         )}
+        <p className="text-center text-sm text-slate-400">
+          <Link href="/entrar" className="text-slate-500 hover:text-slate-700 underline underline-offset-2">
+            Entrar na minha conta
+          </Link>
+        </p>
       </div>
     </PublicLayout>
   );

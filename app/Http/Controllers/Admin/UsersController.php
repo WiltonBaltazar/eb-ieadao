@@ -209,4 +209,11 @@ class UsersController extends Controller
         $user->delete();
         return back()->with('success', 'Utilizador eliminado.');
     }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer|exists:users,id']);
+        User::whereIn('id', $request->ids)->delete();
+        return back()->with('success', count($request->ids) . ' utilizador(es) eliminado(s).');
+    }
 }

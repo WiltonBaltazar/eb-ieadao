@@ -1,5 +1,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useBulkSelect } from '@/hooks/useBulkSelect';
+import BulkActionBar from '@/Components/BulkActionBar';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -141,7 +143,17 @@ function SearchableSelect({
 export default function Sessoes({ sessions, classrooms, teachers, filters }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [editItem, setEditItem] = useState<StudySession | null>(null);
-  const { handleSort, handlePerPage } = useTableNav('/admin/sessoes', filters);
+  const { handleSort: baseHandleSort, handlePerPage: baseHandlePerPage } = useTableNav('/admin/sessoes', filters);
+  const { selectedIds, selectedCount, isAllSelected, isIndeterminate, isSelected, toggleOne, toggleAll, clearSelection } = useBulkSelect(sessions.data);
+
+  const handleSort = (col: string, dir: string) => { clearSelection(); baseHandleSort(col, dir); };
+  const handlePerPage = (n: number) => { clearSelection(); baseHandlePerPage(n); };
+
+  const handleBulkDelete = () => {
+    router.post('/admin/sessoes/bulk-destroy', { ids: selectedIds }, {
+      onSuccess: () => clearSelection(),
+    });
+  };
 
   const createForm = useForm({
     classroom_id: '',
@@ -303,10 +315,27 @@ export default function Sessoes({ sessions, classrooms, teachers, filters }: Pro
 
         <Card>
           <CardContent className="px-0 pt-0">
+            <BulkActionBar
+              selectedCount={selectedCount}
+              totalOnPage={sessions.data.length}
+              label="aulas"
+              onConfirmDelete={handleBulkDelete}
+              onClear={clearSelection}
+              onSelectAll={toggleAll}
+            />
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-slate-100">
                   <tr>
+                    <th className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
+                        onChange={toggleAll}
+                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </th>
                     <SortableTh label="Título" column="title" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />
                     <SortableTh label="Data" column="session_date" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="hidden md:table-cell" />
                     <th className="text-left px-4 py-3 text-slate-500 font-medium hidden md:table-cell">Turma</th>
@@ -318,7 +347,15 @@ export default function Sessoes({ sessions, classrooms, teachers, filters }: Pro
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {sessions.data.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50">
+                    <tr key={s.id} className={isSelected(s.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50'}>
+                      <td className="w-10 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected(s.id)}
+                          onChange={() => toggleOne(s.id)}
+                          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-6 py-3 font-medium max-w-[12rem] truncate">{s.title}</td>
                       <td className="px-4 py-3 text-slate-500 hidden md:table-cell">{s.session_date}</td>
                       <td className="px-4 py-3 text-slate-500 hidden md:table-cell">{s.classroom_name}</td>

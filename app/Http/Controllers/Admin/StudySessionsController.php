@@ -117,6 +117,20 @@ class StudySessionsController extends Controller
         return back()->with('success', 'Aula eliminada.');
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer|exists:study_sessions,id']);
+        StudySession::whereIn('id', $request->ids)->delete();
+        return back()->with('success', count($request->ids) . ' aula(s) eliminada(s).');
+    }
+
+    public function bulkDestroyAttendances(Request $request): RedirectResponse
+    {
+        $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer|exists:attendances,id']);
+        Attendance::whereIn('id', $request->ids)->delete();
+        return back()->with('success', count($request->ids) . ' presença(s) removida(s).');
+    }
+
     public function open(StudySession $studySession): RedirectResponse
     {
         try {
