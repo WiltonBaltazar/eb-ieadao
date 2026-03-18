@@ -198,6 +198,7 @@ export default function SessaoPresencas({
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfTitle, setPdfTitle] = useState('');
   const [pdfUploading, setPdfUploading] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
   const [pdfError, setPdfError] = useState('');
 
   const [showLinkForm, setShowLinkForm] = useState(false);
@@ -222,6 +223,7 @@ export default function SessaoPresencas({
     e.preventDefault();
     if (!pdfFile) return;
     setPdfError('');
+    setPdfProgress(0);
     setPdfUploading(true);
     router.post(
       `/admin/sessoes/${studySession.id}/recursos`,
@@ -229,10 +231,12 @@ export default function SessaoPresencas({
       {
         forceFormData: true,
         preserveScroll: true,
+        onProgress: (progress) => setPdfProgress(progress?.percentage ?? 0),
         onSuccess: () => {
           setShowPdfForm(false);
           setPdfFile(null);
           setPdfTitle('');
+          setPdfProgress(0);
           if (fileInputRef.current) fileInputRef.current.value = '';
         },
         onError: (errs) => setPdfError(errs.file ?? errs.title ?? 'Erro ao carregar o ficheiro.'),
@@ -267,6 +271,32 @@ export default function SessaoPresencas({
       ]}
     >
       <Head title={`Presenças — ${studySession.title}`} />
+
+      {/* ── PDF upload progress overlay ── */}
+      {pdfUploading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl px-8 py-6 w-80 space-y-4">
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6 text-indigo-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">
+                  {pdfFile?.name ?? 'A carregar…'}
+                </p>
+                <p className="text-xs text-slate-500">A enviar ficheiro…</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-indigo-500 transition-all duration-200"
+                  style={{ width: `${pdfProgress}%` }}
+                />
+              </div>
+              <p className="text-right text-xs font-medium text-indigo-600">{pdfProgress}%</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-5">
         {/* Header */}
