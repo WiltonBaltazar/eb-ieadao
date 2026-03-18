@@ -16,8 +16,17 @@ class StudentAllSessionsController extends Controller
 
         if (!$user->classroom_id) {
             return Inertia::render('TodasAulas', [
-                'sessions' => [],
-                'filters'  => [],
+                'sessions' => [
+                    'data'         => [],
+                    'current_page' => 1,
+                    'last_page'    => 1,
+                    'per_page'     => 15,
+                    'total'        => 0,
+                    'from'         => null,
+                    'to'           => null,
+                    'links'        => [],
+                ],
+                'filters' => [],
             ]);
         }
 
@@ -38,7 +47,7 @@ class StudentAllSessionsController extends Controller
             ->pluck('study_session_id')
             ->flip(); // O(1) lookup
 
-        $sessions = $query->get()->map(function ($s) use ($attendedSessionIds) {
+        $paginator = $query->paginate(15)->through(function ($s) use ($attendedSessionIds) {
             return [
                 'id'              => $s->id,
                 'title'           => $s->title,
@@ -54,7 +63,7 @@ class StudentAllSessionsController extends Controller
         });
 
         return Inertia::render('TodasAulas', [
-            'sessions' => $sessions,
+            'sessions' => $paginator,
             'filters'  => $request->only(['search']),
         ]);
     }
