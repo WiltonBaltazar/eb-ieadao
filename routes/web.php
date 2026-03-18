@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ClassroomsController;
+use App\Http\Controllers\Admin\StudentsController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -51,6 +52,10 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     // Profile
     Route::get('/perfil', [\App\Http\Controllers\Admin\AdminProfileController::class, 'edit'])->name('admin.profile.edit');
     Route::put('/perfil', [\App\Http\Controllers\Admin\AdminProfileController::class, 'update'])->name('admin.profile.update');
+
+    // Students
+    Route::get('/alunos', [StudentsController::class, 'index'])->name('admin.students.index');
+    Route::put('/alunos/{user}/transfer', [StudentsController::class, 'transfer'])->name('admin.students.transfer');
 
     // Users
     Route::get('/utilizadores', [UsersController::class, 'index'])->name('admin.users.index');

@@ -13,6 +13,7 @@ import {
 import {
   LayoutDashboard,
   Users,
+  GraduationCap,
   User,
   BookOpen,
   CalendarDays,
@@ -34,6 +35,7 @@ interface AdminLayoutProps {
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/utilizadores', label: 'Utilizadores', icon: Users },
+  { href: '/admin/alunos', label: 'Alunos', icon: GraduationCap },
   { href: '/admin/turmas', label: 'Turmas', icon: BookOpen },
   { href: '/admin/sessoes', label: 'Aulas', icon: CalendarDays },
   { href: '/admin/relatorios', label: 'Relatórios', icon: BarChart2 },
