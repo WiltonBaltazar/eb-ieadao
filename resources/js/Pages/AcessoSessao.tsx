@@ -135,7 +135,7 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
         {session.status !== 'open' && (
           <Card>
             <CardContent className="py-6 text-center text-slate-500">
-              <p>Esta sessão não está aberta para presenças.</p>
+              <p>Esta Aula não está aberta para presenças.</p>
             </CardContent>
           </Card>
         )}

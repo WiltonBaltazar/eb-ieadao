@@ -115,7 +115,7 @@ export default function MinhasPresencas({ attendances, stats, filters }: Props) 
           <CardContent className="pt-4 pb-3">
             <div className="flex gap-2">
               <Input
-                placeholder="Pesquisar por nome da sessão…"
+                placeholder="Pesquisar por nome da Aula..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}

@@ -46,7 +46,7 @@ export default function MeuPerfil({ student, stats, lastAttendances, upcomingSes
           <CardContent className="space-y-3">
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-slate-800">{stats.attended}</span>
-              <span className="text-slate-500">/ {stats.total} sessões</span>
+              <span className="text-slate-500">/ {stats.total} aulas</span>
               <Badge className="ml-auto bg-green-100 text-green-800 hover:bg-green-100">
                 {stats.rate}%
               </Badge>
@@ -66,7 +66,7 @@ export default function MeuPerfil({ student, stats, lastAttendances, upcomingSes
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <QrCode className="h-5 w-5 text-blue-500" />
-                Sessões Abertas
+                Aulas Abertas
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">

@@ -89,7 +89,7 @@ class AttendanceService
 
         // 3. Session must be open
         if (!$session->isOpen()) {
-            throw new AttendanceException('A sessão não está aberta para presenças.');
+            throw new AttendanceException('A aula não está aberta para presenças.');
         }
 
         // 4. QR code must match and not be expired
@@ -121,7 +121,7 @@ class AttendanceService
             ->first();
 
         if ($existing) {
-            throw new AttendanceException('Já confirmaste a tua presença nesta sessão.');
+            throw new AttendanceException('Já confirmaste a tua presença nesta aula.');
         }
 
         return Attendance::create([
