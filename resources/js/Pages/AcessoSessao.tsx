@@ -118,7 +118,7 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="912 345 678"
+                    placeholder="840000000"
                     value={data.phone}
                     onChange={(e) => setData('phone', e.target.value)}
                     autoFocus={!auth_phone}

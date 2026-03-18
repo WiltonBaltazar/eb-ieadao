@@ -387,7 +387,7 @@ export default function SessaoPresencas({
                           type="tel"
                           value={registerForm.data.phone}
                           onChange={(e) => registerForm.setData('phone', e.target.value)}
-                          placeholder="912 345 678"
+                          placeholder="840000000"
                           className={errors?.phone ? 'border-red-500' : ''}
                         />
                         {errors?.phone && (
