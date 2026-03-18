@@ -54,6 +54,7 @@ export interface AttendanceRecord {
   method: 'manual' | 'qr' | 'auto';
   method_label: string;
   checked_in_at: string;
+  session_url: string;
 }
 
 export interface PaginatedData<T> {
@@ -123,8 +124,7 @@ export interface MeuPerfilPageProps extends PageProps {
     session_date: string;
     classroom_name: string;
     check_in_url: string;
-    has_resources: boolean;
-    resources_url: string;
+    session_url: string;
   }>;
 }
 

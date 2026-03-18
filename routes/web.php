@@ -44,7 +44,7 @@ Route::middleware(['role:student,teacher'])->group(function () {
     Route::get('/minhas-presencas', [StudentAttendanceController::class, 'index'])->name('student.attendances');
     Route::get('/perfil/editar', [StudentProfileController::class, 'edit'])->name('student.profile.edit');
     Route::put('/perfil/editar', [StudentProfileController::class, 'update'])->name('student.profile.update');
-    Route::get('/sessao/{studySession}/recursos', [StudentSessionResourcesController::class, 'show'])->name('student.session.resources');
+    Route::get('/aula/{studySession}', [StudentSessionResourcesController::class, 'show'])->name('student.aula.show');
 });
 
 // Admin/Teacher Routes

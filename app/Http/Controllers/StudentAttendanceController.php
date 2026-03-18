@@ -50,6 +50,7 @@ class StudentAttendanceController extends Controller
             'method' => $a->check_in_method->value,
             'method_label' => $a->check_in_method->label(),
             'checked_in_at' => $a->checked_in_at->format('d/m/Y H:i'),
+            'session_url' => route('student.aula.show', $a->session),
         ]);
 
         // Calculate streak
