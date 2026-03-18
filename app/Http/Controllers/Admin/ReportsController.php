@@ -8,6 +8,10 @@ use App\Models\Classroom;
 use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
+use App\Support\ExcelExport;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,27 +23,14 @@ class ReportsController extends Controller
     {
         $threshold = Setting::attendanceThreshold();
 
-        // Attendance over time (last 12 sessions)
-        $attendanceOverTime = StudySession::with('attendances')
-            ->whereIn('status', ['open', 'closed'])
-            ->latest('session_date')
-            ->take(12)
-            ->get()
-            ->reverse()
-            ->map(fn ($s) => [
-                'date' => $s->session_date->format('d/m'),
-                'count' => $s->attendances->count(),
-                'title' => $s->title,
-            ])
-            ->values();
-
-        // Per classroom
+        // Per classroom (all classrooms, active or not)
         $byClassroom = Classroom::withCount('students')
             ->with(['studySessions' => fn ($q) => $q->whereIn('status', ['open', 'closed'])])
             ->get()
             ->map(fn ($c) => [
                 'id' => $c->id,
                 'name' => $c->name,
+                'is_active' => $c->is_active,
                 'students_count' => $c->students_count,
                 'sessions_count' => $c->studySessions->count(),
                 'total_attendances' => $c->studySessions->sum(fn ($s) => $s->attendances()->count()),
@@ -63,12 +54,87 @@ class ReportsController extends Controller
             ])
             ->values();
 
+        // All classrooms for the filter dropdown (active or not)
+        $classrooms = Classroom::orderBy('name')
+            ->get()
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'is_active' => $c->is_active,
+            ]);
+
         return Inertia::render('Admin/Relatorios', [
-            'attendanceOverTime' => $attendanceOverTime,
             'byClassroom' => $byClassroom,
             'belowThreshold' => $belowThreshold,
             'threshold' => $threshold,
+            'classrooms' => $classrooms,
         ]);
+    }
+
+    public function chartData(Request $request): JsonResponse
+    {
+        $request->validate([
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+            'classroom_id' => 'nullable|exists:classrooms,id',
+            'compare' => 'nullable|boolean',
+        ]);
+
+        $from = Carbon::parse($request->from)->startOfDay();
+        $to = Carbon::parse($request->to)->endOfDay();
+        $classroomId = $request->input('classroom_id');
+        $compare = $request->boolean('compare', false);
+
+        $current = $this->getDailyAttendance($from, $to, $classroomId);
+
+        $previous = [];
+        if ($compare) {
+            $days = $from->diffInDays($to) + 1;
+            $prevFrom = $from->copy()->subDays($days);
+            $prevTo = $from->copy()->subDay()->endOfDay();
+            $previous = $this->getDailyAttendance($prevFrom, $prevTo, $classroomId);
+        }
+
+        return response()->json([
+            'current' => $current,
+            'previous' => $previous,
+            'from' => $from->format('Y-m-d'),
+            'to' => $to->format('Y-m-d'),
+        ]);
+    }
+
+    private function getDailyAttendance(Carbon $from, Carbon $to, ?int $classroomId): array
+    {
+        $query = StudySession::with('attendances')
+            ->whereIn('status', ['open', 'closed'])
+            ->whereBetween('session_date', [$from, $to]);
+
+        if ($classroomId) {
+            $query->where('classroom_id', $classroomId);
+        }
+
+        $sessions = $query->get();
+
+        // Group attendance counts by date
+        $byDate = [];
+        foreach ($sessions as $session) {
+            $date = $session->session_date->format('Y-m-d');
+            $byDate[$date] = ($byDate[$date] ?? 0) + $session->attendances->count();
+        }
+
+        // Fill in all days in the range
+        $period = CarbonPeriod::create($from, $to);
+        $result = [];
+        foreach ($period as $day) {
+            $date = $day->format('Y-m-d');
+            $result[] = [
+                'date' => $date,
+                'label' => $day->format('d/m'),
+                'count' => $byDate[$date] ?? 0,
+            ];
+        }
+
+        return $result;
     }
 
     public function registros(Request $request): Response
@@ -144,5 +210,77 @@ class ReportsController extends Controller
 
             fclose($handle);
         }, 'presencas.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportClassroomExcel(Classroom $classroom): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $totalSessions = StudySession::where('classroom_id', $classroom->id)
+            ->whereIn('status', ['open', 'closed'])
+            ->count();
+
+        $students = User::where('classroom_id', $classroom->id)
+            ->where('role', 'student')
+            ->with('attendances')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($s) use ($totalSessions) {
+                $attended = $s->attendances->count();
+                return [
+                    'name'   => $s->name,
+                    'phone'  => $s->phone ?? '',
+                    'grupo'  => $s->grupo_homogeneo?->label() ?? '',
+                    'attended' => $attended,
+                    'total'  => $totalSessions,
+                    'rate'   => $totalSessions > 0 ? round(($attended / $totalSessions) * 100) : 0,
+                ];
+            });
+
+        $filename = 'assiduidade_' . str($classroom->name)->slug('_') . '.xlsx';
+
+        return ExcelExport::download($filename, function ($sheet) use ($classroom, $students, $totalSessions) {
+            // Title
+            $sheet->setCellValue('A1', 'Assiduidade — ' . $classroom->name);
+            $sheet->setCellValue('A2', 'Total de sessões: ' . $totalSessions . '  ·  Exportado em ' . now()->format('d/m/Y'));
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+            $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setARGB('FF64748B');
+            $sheet->mergeCells('A1:F1');
+            $sheet->mergeCells('A2:F2');
+
+            // Headers
+            $headers = ['Nome', 'Telefone', 'Grupo Homogéneo', 'Presenças', 'Total Sessões', 'Taxa (%)'];
+            foreach ($headers as $i => $h) {
+                $sheet->setCellValue([$i + 1, 4], $h);
+            }
+            ExcelExport::styleHeader($sheet, 'A4:F4');
+            $sheet->getRowDimension(4)->setRowHeight(22);
+
+            // Data
+            foreach ($students as $idx => $s) {
+                $row = $idx + 5;
+                $sheet->setCellValue([1, $row], $s['name']);
+                $sheet->setCellValue([2, $row], $s['phone']);
+                $sheet->setCellValue([3, $row], $s['grupo']);
+                $sheet->setCellValue([4, $row], $s['attended']);
+                $sheet->setCellValue([5, $row], $s['total']);
+                $sheet->setCellValue([6, $row], $s['rate'] . '%');
+                ExcelExport::styleData($sheet, "A{$row}:F{$row}", $idx % 2 === 0);
+
+                // Colour the rate cell
+                $rateCell = "F{$row}";
+                $color = $s['rate'] >= 75 ? 'FFD1FAE5' : ($s['rate'] >= 50 ? 'FFFEF3C7' : 'FFFEE2E2');
+                $sheet->getStyle($rateCell)->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB($color);
+            }
+
+            // Column widths
+            foreach ([['A', 30], ['B', 16], ['C', 32], ['D', 12], ['E', 14], ['F', 12]] as [$col, $width]) {
+                $sheet->getColumnDimension($col)->setWidth($width);
+            }
+
+            // Centre numeric columns
+            $sheet->getStyle('D5:F' . ($students->count() + 4))->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        });
     }
 }
