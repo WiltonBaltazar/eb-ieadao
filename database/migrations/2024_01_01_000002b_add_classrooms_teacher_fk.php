@@ -27,7 +27,7 @@ return new class extends Migration
         }
 
         Schema::table('classrooms', function (Blueprint $table) {
-            $table->dropForeignIfExists(['teacher_id']);
+            $table->dropForeign(['teacher_id']);
         });
     }
 };

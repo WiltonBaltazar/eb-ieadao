@@ -35,7 +35,7 @@ return new class extends Migration
         // 3. Drop FK (MySQL only) then drop column
         if (config('database.default') !== 'sqlite') {
             Schema::table('classrooms', function (Blueprint $table) {
-                $table->dropForeignIfExists(['teacher_id']);
+                $table->dropForeign(['teacher_id']);
             });
         }
         Schema::table('classrooms', function (Blueprint $table) {
@@ -58,7 +58,7 @@ return new class extends Migration
     {
         Schema::table('study_sessions', function (Blueprint $table) {
             if (config('database.default') !== 'sqlite') {
-                $table->dropForeignIfExists(['teacher_id']);
+                $table->dropForeign(['teacher_id']);
             }
             $table->dropColumn('teacher_id');
         });
