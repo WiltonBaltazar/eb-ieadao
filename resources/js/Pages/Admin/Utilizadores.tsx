@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/Components/ui/select';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
-import { Plus, Search, Trash2, AlertCircle, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, AlertCircle, Eye, Pencil } from 'lucide-react';
 import { PageProps, PaginatedData } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
@@ -33,8 +33,11 @@ interface UserRow {
   name: string;
   email: string | null;
   phone: string | null;
+  whatsapp: string | null;
+  alt_contact: string | null;
   role: string;
   role_label: string;
+  classroom_id: number | null;
   classroom_name: string | null;
   grupo_homogeneo: string | null;
   grupo_homogeneo_label: string | null;
@@ -55,9 +58,11 @@ const roleColors: Record<string, string> = {
   student: 'bg-green-100 text-green-800',
 };
 
-export default function Utilizadores({ users, classrooms, roles, gruposOptions, filters, errors }: Props) {
+export default function Utilizadores({ users, classrooms, roles, gruposOptions, filters, errors, auth }: Props) {
+  const isAdmin = auth.user?.role === 'admin';
   const [search, setSearch] = useState(filters.search ?? '');
   const [showCreate, setShowCreate] = useState(false);
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
   const { handleSort: baseHandleSort, handlePerPage: baseHandlePerPage } = useTableNav('/admin/utilizadores', filters);
   const { selectedIds, selectedCount, isAllSelected, isIndeterminate, isSelected, toggleOne, toggleAll, clearSelection } = useBulkSelect(users.data);
 
@@ -76,6 +81,39 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
 
   const handleFilter = (key: string, value: string) => {
     router.get('/admin/utilizadores', { ...filters, [key]: value }, { preserveState: true });
+  };
+
+  const editForm = useForm({
+    name: '',
+    email: '',
+    phone: '',
+    whatsapp: '',
+    alt_contact: '',
+    grupo_homogeneo: '',
+    classroom_id: '',
+    password: '',
+  });
+
+  const openEdit = (u: UserRow) => {
+    setEditUser(u);
+    editForm.setData({
+      name: u.name,
+      email: u.email ?? '',
+      phone: u.phone ?? '',
+      whatsapp: u.whatsapp ?? '',
+      alt_contact: u.alt_contact ?? '',
+      grupo_homogeneo: u.grupo_homogeneo ?? '',
+      classroom_id: u.classroom_id ? String(u.classroom_id) : '',
+      password: '',
+    });
+  };
+
+  const handleEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+    editForm.put(`/admin/utilizadores/${editUser.id}`, {
+      onSuccess: () => setEditUser(null),
+    });
   };
 
   const createForm = useForm({
@@ -245,10 +283,10 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
               onSelectAll={toggleAll}
             />
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm admin-table">
                 <thead className="border-b border-slate-100">
                   <tr>
-                    <th className="w-10 px-4 py-3">
+                    <th className="bg-slate-50/80 w-10 px-4 py-3">
                       <input
                         type="checkbox"
                         checked={isAllSelected}
@@ -260,9 +298,9 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
                     <SortableTh label="Nome" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />
                     <SortableTh label="Contacto" column="phone" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="hidden md:table-cell" />
                     <SortableTh label="Papel" column="role" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} />
-                    <th className="text-left px-4 py-3 text-slate-500 font-medium hidden lg:table-cell">Turma</th>
-                    <th className="text-left px-4 py-3 text-slate-500 font-medium hidden lg:table-cell">Grupo</th>
-                    <th className="text-right px-6 py-3 text-slate-500 font-medium">Ações</th>
+                    <th className="bg-slate-50/80 text-left px-4 py-3 text-slate-600 font-semibold text-xs uppercase tracking-wide hidden lg:table-cell">Turma</th>
+                    <th className="bg-slate-50/80 text-left px-4 py-3 text-slate-600 font-semibold text-xs uppercase tracking-wide hidden lg:table-cell">Grupo</th>
+                    <th className="bg-slate-50/80 text-right px-6 py-3 text-slate-600 font-semibold text-xs uppercase tracking-wide">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -296,17 +334,19 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
                           )}
                           <Button asChild size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-slate-600">
                             <Link href={`/admin/utilizadores/${u.id}`}>
-                              <Eye className="h-3.5 w-3.5" />Ver Detalhes
+                              <Eye className="h-3.5 w-3.5" />Ver
                             </Link>
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 gap-1 text-xs text-red-500"
-                            onClick={() => handleDelete(u.id, u.name)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />Eliminar
-                          </Button>
+                          {isAdmin && (
+                            <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-slate-600" onClick={() => openEdit(u)}>
+                              <Pencil className="h-3.5 w-3.5" />Editar
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-red-500" onClick={() => handleDelete(u.id, u.name)}>
+                              <Trash2 className="h-3.5 w-3.5" />Eliminar
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -324,6 +364,80 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
           onPerPageChange={handlePerPage}
         />
       </div>
+      {/* Edit dialog — admin only */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Utilizador</DialogTitle>
+          </DialogHeader>
+          {editUser && (
+            <form onSubmit={handleEdit} className="space-y-3">
+              {editForm.errors && Object.keys(editForm.errors).length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{Object.values(editForm.errors)[0]}</AlertDescription>
+                </Alert>
+              )}
+              <div className="space-y-1">
+                <Label>Nome *</Label>
+                <Input value={editForm.data.name} onChange={(e) => editForm.setData('name', e.target.value)} required />
+              </div>
+              {editUser.role !== 'student' && (
+                <div className="space-y-1">
+                  <Label>Email</Label>
+                  <Input type="email" value={editForm.data.email} onChange={(e) => editForm.setData('email', e.target.value)} />
+                </div>
+              )}
+              <div className="space-y-1">
+                <Label>Telefone</Label>
+                <Input type="tel" value={editForm.data.phone} onChange={(e) => editForm.setData('phone', e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Contacto alternativo</Label>
+                <Input value={editForm.data.alt_contact} onChange={(e) => editForm.setData('alt_contact', e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Grupo Homogéneo</Label>
+                <Select
+                  value={editForm.data.grupo_homogeneo || '_none_'}
+                  onValueChange={(v) => editForm.setData('grupo_homogeneo', v === '_none_' ? '' : v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Seleciona…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none_">—</SelectItem>
+                    {gruposOptions.map((g) => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Turma</Label>
+                <Select
+                  value={editForm.data.classroom_id || '_none_'}
+                  onValueChange={(v) => editForm.setData('classroom_id', v === '_none_' ? '' : v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Sem turma" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none_">Sem turma</SelectItem>
+                    {classrooms.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {editUser.role !== 'student' && (
+                <div className="space-y-1">
+                  <Label>Nova password <span className="text-slate-400 font-normal">(deixar em branco para manter)</span></Label>
+                  <Input type="password" value={editForm.data.password} onChange={(e) => editForm.setData('password', e.target.value)} autoComplete="new-password" />
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="flex-1" disabled={editForm.processing}>
+                  {editForm.processing ? 'A guardar…' : 'Guardar'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

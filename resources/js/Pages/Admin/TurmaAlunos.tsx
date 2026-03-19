@@ -136,11 +136,14 @@ export default function TurmaAlunos({
             </p>
           </div>
           <div className="flex gap-2">
-            <Button asChild size="sm" variant="outline" className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50">
-              <a href={`/admin/relatorios/turma/${classroom.id}/exportar-excel`} download>
-                <FileSpreadsheet className="h-4 w-4" />
-                Excel
-              </a>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
+              onClick={() => { window.location.href = `/admin/relatorios/turma/${classroom.id}/exportar-excel?year=${year}`; }}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Excel {year}
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/turmas">
@@ -274,7 +277,7 @@ export default function TurmaAlunos({
               <>
                 {/* Desktop table */}
                 <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm admin-table">
                     <thead className="border-b border-slate-100 bg-slate-50/50">
                       <tr>
                         <SortableTh label="Nome" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />

@@ -57,3 +57,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Consistent admin table header styling across all pages */
+  .admin-table thead th {
+    @apply bg-slate-50/80 text-slate-600 font-semibold text-xs uppercase tracking-wide;
+  }
+}

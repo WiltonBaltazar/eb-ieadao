@@ -160,7 +160,7 @@ export default function Alunos({ students, classrooms, gruposOptions, filters }:
         <Card>
           <CardContent className="px-0 pt-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm admin-table">
                 <thead className="border-b border-slate-100">
                   <tr>
                     <SortableTh label="Nome" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />

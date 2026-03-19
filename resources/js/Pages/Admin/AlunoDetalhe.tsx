@@ -255,7 +255,7 @@ export default function AlunoDetalhe({
             ) : (
               <>
                 <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm admin-table">
                     <thead>
                       <tr className="border-b bg-slate-50 text-left text-slate-500">
                         <SortableTh label="Aula" column="title" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />

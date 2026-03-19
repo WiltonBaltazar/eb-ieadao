@@ -97,7 +97,7 @@ export default function Ranking({ students, threshold, classrooms, filters }: Pr
         <Card>
           <CardContent className="px-0 pt-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm admin-table">
                 <thead className="border-b border-slate-100">
                   <tr>
                     <th className="text-left px-6 py-3 text-slate-500 font-medium w-10">#</th>

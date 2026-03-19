@@ -23,8 +23,8 @@ export default function BulkActionBar({ selectedCount, totalOnPage, label, onCon
   if (selectedCount === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100">
-      <span className="text-sm font-medium text-blue-800">
+    <div className="flex items-center gap-2 px-4 py-2 bg-brand-primary/[0.05] border-b border-brand-primary/10">
+      <span className="text-sm font-semibold text-brand-primary">
         {selectedCount} selecionado{selectedCount !== 1 ? 's' : ''}
       </span>
       <div className="flex items-center gap-1.5 ml-auto">

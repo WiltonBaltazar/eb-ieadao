@@ -73,80 +73,78 @@ export default function Dashboard({
       <FlashMessage />
 
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Visão geral da atividade do sistema</p>
+        </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="pt-6 relative">
+          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-brand-primary overflow-hidden">
+            <CardContent className="pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Estudantes</p>
-                  <p className="text-3xl font-bold mt-1 tracking-tight text-slate-800">{stats.total_students}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Estudantes</p>
+                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-slate-800">{stats.total_students}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-brand-primary/10 flex items-center justify-center shrink-0">
-                  <Users className="h-6 w-6 text-brand-primary" />
+                <div className="h-10 w-10 rounded-lg bg-brand-primary flex items-center justify-center shrink-0">
+                  <Users className="h-5 w-5 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-brand-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="pt-6 relative">
+          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-brand-accent overflow-hidden">
+            <CardContent className="pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Turmas Ativas</p>
-                  <p className="text-3xl font-bold mt-1 tracking-tight text-slate-800">{stats.total_classrooms}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Turmas Ativas</p>
+                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-slate-800">{stats.total_classrooms}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-brand-accent/10 flex items-center justify-center shrink-0">
-                  <BookOpen className="h-6 w-6 text-brand-accent" />
+                <div className="h-10 w-10 rounded-lg bg-brand-accent flex items-center justify-center shrink-0">
+                  <BookOpen className="h-5 w-5 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-brand-yellow/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="pt-6 relative">
+          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-brand-yellow overflow-hidden">
+            <CardContent className="pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Sessões</p>
-                  <p className="text-3xl font-bold mt-1 tracking-tight text-slate-800">{stats.total_sessions}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sessões</p>
+                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-slate-800">{stats.total_sessions}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-brand-yellow/10 flex items-center justify-center shrink-0">
-                  <CalendarDays className="h-6 w-6 text-brand-yellow" />
+                <div className="h-10 w-10 rounded-lg bg-brand-yellow flex items-center justify-center shrink-0">
+                  <CalendarDays className="h-5 w-5 text-slate-800" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="pt-6 relative">
+          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-green-500 overflow-hidden">
+            <CardContent className="pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Abertas Agora</p>
-                  <p className="text-3xl font-bold mt-1 tracking-tight text-green-600">{stats.open_sessions}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Abertas Agora</p>
+                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-green-600">{stats.open_sessions}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                  <Activity className="h-6 w-6 text-green-600" />
+                <div className="h-10 w-10 rounded-lg bg-green-500 flex items-center justify-center shrink-0">
+                  <Activity className="h-5 w-5 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardContent className="pt-6 relative">
+          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-slate-400 overflow-hidden">
+            <CardContent className="pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Assiduidade</p>
-                  <p className="text-3xl font-bold mt-1 tracking-tight text-slate-800">{stats.avg_attendance}%</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Assiduidade</p>
+                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-slate-800">{stats.avg_attendance}%</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                  <Percent className="h-6 w-6 text-slate-500" />
+                <div className="h-10 w-10 rounded-lg bg-slate-500 flex items-center justify-center shrink-0">
+                  <Percent className="h-5 w-5 text-white" />
                 </div>
               </div>
             </CardContent>

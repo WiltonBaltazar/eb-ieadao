@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Classroom;
+use App\Models\Enrollment;
 use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
@@ -22,19 +23,6 @@ class ReportsController extends Controller
     public function index(): Response
     {
         $threshold = Setting::attendanceThreshold();
-
-        // Per classroom (all classrooms, active or not)
-        $byClassroom = Classroom::withCount('students')
-            ->with(['studySessions' => fn ($q) => $q->whereIn('status', ['open', 'closed'])])
-            ->get()
-            ->map(fn ($c) => [
-                'id' => $c->id,
-                'name' => $c->name,
-                'is_active' => $c->is_active,
-                'students_count' => $c->students_count,
-                'sessions_count' => $c->studySessions->count(),
-                'total_attendances' => $c->studySessions->sum(fn ($s) => $s->attendances()->count()),
-            ]);
 
         // Below threshold
         $belowThreshold = User::where('role', 'student')
@@ -63,11 +51,16 @@ class ReportsController extends Controller
                 'is_active' => $c->is_active,
             ]);
 
+        $availableYears = Enrollment::distinct()
+            ->orderByDesc('academic_year')
+            ->pluck('academic_year')
+            ->values();
+
         return Inertia::render('Admin/Relatorios', [
-            'byClassroom' => $byClassroom,
             'belowThreshold' => $belowThreshold,
             'threshold' => $threshold,
             'classrooms' => $classrooms,
+            'availableYears' => $availableYears,
         ]);
     }
 
@@ -183,6 +176,8 @@ class ReportsController extends Controller
 
     public function exportCsv(Request $request): StreamedResponse
     {
+        $year = $request->filled('year') ? (int) $request->year : null;
+
         $query = Attendance::with(['session.classroom', 'student', 'markedBy'])
             ->latest('checked_in_at');
 
@@ -190,7 +185,13 @@ class ReportsController extends Controller
             $query->whereHas('session', fn ($q) => $q->where('classroom_id', $request->classroom_id));
         }
 
+        if ($year) {
+            $query->whereHas('session', fn ($q) => $q->whereYear('session_date', $year));
+        }
+
         $attendances = $query->get();
+
+        $filename = $year ? "presencas_{$year}.csv" : 'presencas.csv';
 
         return response()->streamDownload(function () use ($attendances) {
             $handle = fopen('php://output', 'w');
@@ -209,18 +210,23 @@ class ReportsController extends Controller
             }
 
             fclose($handle);
-        }, 'presencas.csv', ['Content-Type' => 'text/csv']);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
-    public function exportClassroomExcel(Classroom $classroom): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function exportClassroomExcel(Request $request, Classroom $classroom): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        $totalSessions = StudySession::where('classroom_id', $classroom->id)
-            ->whereIn('status', ['open', 'closed'])
-            ->count();
+        $year = $request->filled('year') ? (int) $request->year : null;
 
-        $sessionIds = StudySession::where('classroom_id', $classroom->id)
-            ->whereIn('status', ['open', 'closed'])
-            ->pluck('id');
+        $sessionsQuery = StudySession::where('classroom_id', $classroom->id)
+            ->whereIn('status', ['open', 'closed']);
+
+        if ($year) {
+            $sessionsQuery->whereYear('session_date', $year);
+        }
+
+        $totalSessions = $sessionsQuery->count();
+
+        $sessionIds = $sessionsQuery->pluck('id');
 
         $students = User::where('classroom_id', $classroom->id)
             ->where('role', 'student')
@@ -239,11 +245,16 @@ class ReportsController extends Controller
                 ];
             });
 
-        $filename = 'assiduidade_' . str($classroom->name)->slug('_') . '.xlsx';
+        $yearSuffix = $year ? "_{$year}" : '';
+        $filename = 'assiduidade_' . str($classroom->name)->slug('_') . $yearSuffix . '.xlsx';
 
-        return ExcelExport::download($filename, function ($sheet) use ($classroom, $students, $totalSessions) {
+        return ExcelExport::download($filename, function ($sheet) use ($classroom, $students, $totalSessions, $year) {
             // Title
-            $sheet->setCellValue('A1', 'Assiduidade — ' . $classroom->name);
+            $title = 'Assiduidade — ' . $classroom->name;
+            if ($year) {
+                $title .= ' (' . $year . ')';
+            }
+            $sheet->setCellValue('A1', $title);
             $sheet->setCellValue('A2', 'Total de sessões: ' . $totalSessions . '  ·  Exportado em ' . now()->format('d/m/Y'));
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
             $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setARGB('FF64748B');

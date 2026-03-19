@@ -267,7 +267,7 @@ export default function Turmas({ classrooms, teachers, filters, errors }: Props)
               onSelectAll={toggleAll}
             />
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm admin-table">
                 <thead className="border-b border-slate-100">
                   <tr>
                     <th className="w-10 px-4 py-3">
