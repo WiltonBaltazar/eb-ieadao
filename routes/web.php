@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ClassroomsController;
+use App\Http\Controllers\Admin\EnrollmentsController;
 use App\Http\Controllers\Admin\LessonResourcesController;
 use App\Http\Controllers\Admin\StudentsController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -98,6 +99,11 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::post('/sessoes/{studySession}/recursos', [LessonResourcesController::class, 'store'])->name('admin.resources.store');
     Route::delete('/recursos/{resource}', [LessonResourcesController::class, 'destroy'])->name('admin.resources.destroy');
     Route::get('/recursos/{resource}/download', [LessonResourcesController::class, 'download'])->name('admin.resources.download');
+
+    // Enrollments (annual)
+    Route::get('/matriculas', [EnrollmentsController::class, 'index'])->name('admin.enrollments.index');
+    Route::post('/matriculas/bulk', [EnrollmentsController::class, 'bulkEnroll'])->name('admin.enrollments.bulk');
+    Route::post('/matriculas/copiar-ano', [EnrollmentsController::class, 'copyFromYear'])->name('admin.enrollments.copy');
 
     // Reports
     Route::get('/relatorios', [ReportsController::class, 'index'])->name('admin.reports.index');

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\GrupoHomogeneo;
 use App\Http\Controllers\Controller;
 use App\Models\Classroom;
+use App\Models\Setting;
+use App\Models\StudySession;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,13 +59,13 @@ class ClassroomsController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'teacher_ids' => 'nullable|array',
-            'teacher_ids.*' => 'exists:users,id',
-            'meeting_day' => 'nullable|string|max:20',
-            'meeting_time' => 'nullable|string',
-            'is_active'   => 'boolean',
+            'name'           => 'required|string|max:255',
+            'description'    => 'nullable|string',
+            'teacher_ids'    => 'nullable|array',
+            'teacher_ids.*'  => 'exists:users,id',
+            'meeting_day'    => 'nullable|string|max:20',
+            'meeting_time'   => 'nullable|string',
+            'is_active'      => 'boolean',
         ], [
             'name.required' => 'O nome da turma é obrigatório.',
         ]);
@@ -80,13 +82,13 @@ class ClassroomsController extends Controller
     public function update(Request $request, Classroom $classroom): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'teacher_ids' => 'nullable|array',
-            'teacher_ids.*' => 'exists:users,id',
-            'meeting_day' => 'nullable|string|max:20',
-            'meeting_time' => 'nullable|string',
-            'is_active'   => 'boolean',
+            'name'           => 'required|string|max:255',
+            'description'    => 'nullable|string',
+            'teacher_ids'    => 'nullable|array',
+            'teacher_ids.*'  => 'exists:users,id',
+            'meeting_day'    => 'nullable|string|max:20',
+            'meeting_time'   => 'nullable|string',
+            'is_active'      => 'boolean',
         ]);
 
         $classroom->update($validated);
@@ -111,7 +113,23 @@ class ClassroomsController extends Controller
     public function students(Request $request, Classroom $classroom): Response
     {
         $classroom->load('teachers');
-        $query = $classroom->students()->with('attendances');
+
+        $currentYear = Setting::currentAcademicYear();
+        $year = $request->filled('year') ? (int) $request->year : $currentYear;
+
+        // Collect all years that have enrollments for this classroom
+        $availableYears = \App\Models\Enrollment::where('classroom_id', $classroom->id)
+            ->distinct()
+            ->orderByDesc('academic_year')
+            ->pluck('academic_year')
+            ->map(fn ($y) => (int) $y)
+            ->values();
+
+        if ($availableYears->isEmpty()) {
+            $availableYears = collect([$currentYear]);
+        }
+
+        $query = $classroom->studentsForYear($year)->with('attendances');
 
         if ($request->filled('search')) {
             $s = $request->search;
@@ -126,8 +144,9 @@ class ClassroomsController extends Controller
             $query->where('grupo_homogeneo', $request->grupo_homogeneo);
         }
 
-        $totalSessions = \App\Models\StudySession::where('classroom_id', $classroom->id)
+        $totalSessions = StudySession::where('classroom_id', $classroom->id)
             ->whereIn('status', ['open', 'closed'])
+            ->whereYear('session_date', $year)
             ->count();
 
         $sortable = ['name', 'phone', 'grupo_homogeneo'];
@@ -164,11 +183,13 @@ class ClassroomsController extends Controller
                 'meeting_day'   => $classroom->meeting_day,
                 'meeting_time'  => $classroom->meeting_time,
             ],
-            'students'      => $students,
-            'totalSessions' => $totalSessions,
-            'gruposOptions' => collect(\App\Enums\GrupoHomogeneo::cases())
+            'students'       => $students,
+            'totalSessions'  => $totalSessions,
+            'gruposOptions'  => collect(\App\Enums\GrupoHomogeneo::cases())
                 ->map(fn ($g) => ['value' => $g->value, 'label' => $g->label()]),
-            'filters'       => $request->only(['search', 'grupo_homogeneo', 'sort_by', 'sort_dir', 'per_page']),
+            'filters'        => $request->only(['search', 'grupo_homogeneo', 'sort_by', 'sort_dir', 'per_page', 'year']),
+            'year'           => $year,
+            'availableYears' => $availableYears,
         ]);
     }
 }

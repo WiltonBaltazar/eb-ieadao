@@ -32,4 +32,9 @@ class Setting extends Model
     {
         return static::get('app_name', config('app.name'));
     }
+
+    public static function currentAcademicYear(): int
+    {
+        return (int) static::get('current_academic_year', now()->year);
+    }
 }

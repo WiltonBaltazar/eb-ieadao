@@ -1,9 +1,16 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Progress } from '@/Components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/Components/ui/select';
 import { CheckCircle2, X, ChevronLeft, Phone, QrCode, Hand, Calendar, Users } from 'lucide-react';
 import { PageProps, PaginatedData } from '@/types';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
@@ -38,11 +45,27 @@ interface Stats {
   rate: number;
 }
 
+interface EnrollmentEntry {
+  classroom_name: string | null;
+  enrolled_at: string | null;
+  transferred_at: string | null;
+}
+
+interface EnrollmentHistoryRow {
+  year: number;
+  classroom_id: number | null;
+  classroom_name: string | null;
+  entries: EnrollmentEntry[];
+}
+
 interface Props extends PageProps {
   student: Student;
   sessions: PaginatedData<SessionRow>;
   stats: Stats;
   filters: Record<string, string>;
+  enrollmentHistory: EnrollmentHistoryRow[];
+  availableYears: number[];
+  selectedYear: number;
 }
 
 const grupoColors: Record<string, string> = {
@@ -64,7 +87,15 @@ function rateColor(rate: number): string {
   return 'text-red-600';
 }
 
-export default function AlunoDetalhe({ student, sessions, stats, filters }: Props) {
+export default function AlunoDetalhe({
+  student,
+  sessions,
+  stats,
+  filters,
+  enrollmentHistory,
+  availableYears,
+  selectedYear,
+}: Props) {
   const basePath = `/admin/utilizadores/${student.id}`;
   const { handleSort, handlePerPage } = useTableNav(basePath, filters);
   const breadcrumbs = [
@@ -72,6 +103,10 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
     { label: 'Utilizadores', href: '/admin/utilizadores' },
     { label: student.name },
   ];
+
+  const handleYearChange = (year: string) => {
+    router.get(basePath, { ...filters, year }, { preserveState: true });
+  };
 
   return (
     <AdminLayout breadcrumbs={breadcrumbs}>
@@ -84,22 +119,12 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
               <h1 className="text-2xl font-bold">{student.name}</h1>
 
               {student.grupo_homogeneo && student.grupo_homogeneo_label && (
-                <Badge
-                  className={
-                    grupoColors[student.grupo_homogeneo] ??
-                    'bg-slate-100 text-slate-700'
-                  }
-                >
+                <Badge className={grupoColors[student.grupo_homogeneo] ?? 'bg-slate-100 text-slate-700'}>
                   {student.grupo_homogeneo_label}
                 </Badge>
               )}
 
-              <Badge
-                className={
-                  readinessColors[student.readiness] ??
-                  'bg-slate-100 text-slate-500'
-                }
-              >
+              <Badge className={readinessColors[student.readiness] ?? 'bg-slate-100 text-slate-500'}>
                 {student.readiness_label}
               </Badge>
             </div>
@@ -113,18 +138,13 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
               )}
 
               {student.alt_contact && (
-                <span className="text-slate-500 text-sm pl-5">
-                  {student.alt_contact}
-                </span>
+                <span className="text-slate-500 text-sm pl-5">{student.alt_contact}</span>
               )}
 
               {student.classroom_id && student.classroom_name && (
                 <span className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 shrink-0 text-slate-400" />
-                  <Link
-                    href={`/admin/turmas/${student.classroom_id}/alunos`}
-                    className="text-blue-600 hover:underline"
-                  >
+                  <Link href={`/admin/turmas/${student.classroom_id}/alunos`} className="text-blue-600 hover:underline">
                     {student.classroom_name}
                   </Link>
                 </span>
@@ -140,12 +160,63 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
           </Button>
         </div>
 
+        {/* Enrollment History */}
+        {enrollmentHistory.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-slate-400" />
+                Histórico de Matrículas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="divide-y">
+                {enrollmentHistory.map((row) => (
+                  <div key={row.year} className="py-2 flex items-center gap-4">
+                    <span className="text-sm font-semibold w-12 text-slate-700">{row.year}</span>
+                    <div className="flex-1">
+                      {row.entries.map((entry, i) => (
+                        <div key={i} className="text-sm text-slate-600 flex items-center gap-2">
+                          <span>{entry.classroom_name ?? '—'}</span>
+                          {entry.transferred_at && (
+                            <Badge className="bg-amber-100 text-amber-700 text-xs">transferido {entry.transferred_at}</Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {row.classroom_id && (
+                      <Link href={`/admin/turmas/${row.classroom_id}/alunos?year=${row.year}`} className="text-xs text-blue-600 hover:underline">
+                        Ver turma
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Year selector + stats */}
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-slate-700">Presenças</h2>
+          {availableYears.length > 1 && (
+            <Select value={String(selectedYear)} onValueChange={handleYearChange}>
+              <SelectTrigger className="h-8 w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
         <div className="grid grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Total Aulas
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-500">Total Aulas</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{stats.total}</p>
@@ -154,9 +225,7 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Presenças
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-500">Presenças</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{stats.attended}</p>
@@ -165,14 +234,10 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">
-                Taxa
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-500">Taxa</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className={`text-3xl font-bold ${rateColor(stats.rate)}`}>
-                {stats.rate}%
-              </p>
+              <p className={`text-3xl font-bold ${rateColor(stats.rate)}`}>{stats.rate}%</p>
               <Progress value={stats.rate} className="h-1.5" />
             </CardContent>
           </Card>
@@ -180,12 +245,12 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
 
         <Card>
           <CardHeader>
-            <CardTitle>Histórico de Aulas</CardTitle>
+            <CardTitle>Histórico de Aulas — {selectedYear}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {sessions.data.length === 0 ? (
               <p className="px-6 py-10 text-center text-sm text-slate-500">
-                Ainda não há aulas registadas para esta turma
+                Ainda não há aulas registadas para este ano
               </p>
             ) : (
               <>
@@ -204,28 +269,22 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
                     <tbody className="divide-y">
                       {sessions.data.map((session) => (
                         <tr key={session.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 font-medium">
-                            {session.title}
-                          </td>
+                          <td className="px-6 py-4 font-medium">{session.title}</td>
                           <td className="px-6 py-4 text-slate-600">
                             <span className="flex items-center gap-1.5">
                               <Calendar className="h-3.5 w-3.5 text-slate-400" />
                               {session.session_date}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-slate-600">
-                            {session.teacher_name ?? '—'}
-                          </td>
+                          <td className="px-6 py-4 text-slate-600">{session.teacher_name ?? '—'}</td>
                           <td className="px-6 py-4">
                             {session.attended ? (
                               <Badge className="bg-green-100 text-green-700 flex w-fit items-center gap-1">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Presente
+                                <CheckCircle2 className="h-3.5 w-3.5" />Presente
                               </Badge>
                             ) : (
                               <Badge className="bg-red-100 text-red-700 flex w-fit items-center gap-1">
-                                <X className="h-3.5 w-3.5" />
-                                Ausente
+                                <X className="h-3.5 w-3.5" />Ausente
                               </Badge>
                             )}
                           </td>
@@ -233,26 +292,16 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
                             {session.method && session.method_label ? (
                               <Badge
                                 variant="outline"
-                                className={
-                                  session.method === 'qr'
-                                    ? 'border-purple-300 text-purple-700'
-                                    : 'border-slate-300 text-slate-600'
-                                }
+                                className={session.method === 'qr' ? 'border-purple-300 text-purple-700' : 'border-slate-300 text-slate-600'}
                               >
-                                {session.method === 'qr' ? (
-                                  <QrCode className="mr-1 h-3 w-3" />
-                                ) : (
-                                  <Hand className="mr-1 h-3 w-3" />
-                                )}
+                                {session.method === 'qr' ? <QrCode className="mr-1 h-3 w-3" /> : <Hand className="mr-1 h-3 w-3" />}
                                 {session.method_label}
                               </Badge>
                             ) : (
                               <span className="text-slate-400">—</span>
                             )}
                           </td>
-                          <td className="px-6 py-4 text-slate-600">
-                            {session.checked_in_at ?? '—'}
-                          </td>
+                          <td className="px-6 py-4 text-slate-600">{session.checked_in_at ?? '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -265,20 +314,17 @@ export default function AlunoDetalhe({ student, sessions, stats, filters }: Prop
                       <div className="space-y-0.5">
                         <p className="font-medium">{session.title}</p>
                         <p className="text-xs text-slate-500 flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {session.session_date}
+                          <Calendar className="h-3 w-3" />{session.session_date}
                         </p>
                       </div>
                       <div>
                         {session.attended ? (
                           <Badge className="bg-green-100 text-green-700 flex items-center gap-1">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Presente
+                            <CheckCircle2 className="h-3.5 w-3.5" />Presente
                           </Badge>
                         ) : (
                           <Badge className="bg-red-100 text-red-700 flex items-center gap-1">
-                            <X className="h-3.5 w-3.5" />
-                            Ausente
+                            <X className="h-3.5 w-3.5" />Ausente
                           </Badge>
                         )}
                       </div>

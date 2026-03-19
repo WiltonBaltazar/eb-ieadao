@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetTrigger } from '@/Components/ui/sheet';
@@ -36,6 +37,7 @@ const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/utilizadores', label: 'Utilizadores', icon: Users },
   { href: '/admin/alunos', label: 'Alunos', icon: GraduationCap },
+  { href: '/admin/matriculas', label: 'Matrículas', icon: ClipboardList },
   { href: '/admin/turmas', label: 'Turmas', icon: BookOpen },
   { href: '/admin/sessoes', label: 'Aulas', icon: CalendarDays },
   { href: '/admin/relatorios', label: 'Relatórios', icon: BarChart2 },

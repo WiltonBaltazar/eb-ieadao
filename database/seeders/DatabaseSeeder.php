@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         Setting::updateOrCreate(['key' => 'qr_ttl_minutes'], ['value' => 15]);
         Setting::updateOrCreate(['key' => 'attendance_threshold'], ['value' => 75]);
         Setting::updateOrCreate(['key' => 'app_name'], ['value' => 'IEADAO Presenças']);
+        Setting::updateOrCreate(['key' => 'current_academic_year'], ['value' => 2026]);
 
         // ── Staff ──────────────────────────────────────────────
         $admin = User::updateOrCreate(
@@ -202,5 +203,10 @@ class DatabaseSeeder extends Seeder
                 }
             }
         }
+
+        // ── New features ──────────────────────────────────────────────────
+        $this->call([
+            EnrollmentSeeder::class,
+        ]);
     }
 }

@@ -49,6 +49,29 @@ class User extends Authenticatable
         return $this->hasMany(Attendance::class, 'marked_by_id');
     }
 
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class, 'student_id');
+    }
+
+    public function currentEnrollment(): ?Enrollment
+    {
+        return $this->enrollments()
+            ->forYear(Setting::currentAcademicYear())
+            ->active()
+            ->with('classroom')
+            ->first();
+    }
+
+    public function enrollmentForYear(int $year): ?Enrollment
+    {
+        return $this->enrollments()
+            ->forYear($year)
+            ->active()
+            ->with('classroom')
+            ->first();
+    }
+
     // Role helpers
     public function isAdmin(): bool
     {
