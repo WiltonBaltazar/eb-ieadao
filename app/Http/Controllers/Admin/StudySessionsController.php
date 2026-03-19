@@ -37,7 +37,7 @@ class StudySessionsController extends Controller
 
         $sortable = ['title', 'session_date', 'status', 'attendances_count'];
         $sortBy = in_array($request->input('sort_by'), $sortable) ? $request->input('sort_by') : 'session_date';
-        $sortDir = $request->input('sort_dir') === 'desc' ? 'desc' : 'asc';
+        $sortDir = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sortBy, $sortDir);
 
         $perPage = in_array((int) $request->input('per_page'), [25, 50, 100]) ? (int) $request->input('per_page') : 25;

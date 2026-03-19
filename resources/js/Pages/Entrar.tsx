@@ -3,10 +3,7 @@ import { FormEventHandler } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
-import { Label } from '@/Components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
-import { Alert, AlertDescription } from '@/Components/ui/alert';
-import { AlertCircle, Phone } from 'lucide-react';
+import { Phone, AlertCircle } from 'lucide-react';
 import { EntrarPageProps } from '@/types';
 
 export default function Entrar({ errors }: EntrarPageProps) {
@@ -21,58 +18,81 @@ export default function Entrar({ errors }: EntrarPageProps) {
     <PublicLayout>
       <Head title="Entrar — IEADAO Presenças" />
       <div className="w-full max-w-sm">
-        <Card className="shadow-lg">
-          <CardHeader className="text-center pb-2">
-            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center">
-              <Phone className="h-6 w-6 text-slate-600" />
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 overflow-hidden">
+          {/* Card header strip */}
+          <div className="h-1 bg-brand-accent" />
+
+          <div className="px-6 pt-6 pb-7">
+            {/* Icon */}
+            <div className="flex justify-center mb-5">
+              <div className="h-14 w-14 rounded-2xl bg-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/30">
+                <Phone className="h-7 w-7 text-white" />
+              </div>
             </div>
-            <CardTitle className="text-xl">Entrar</CardTitle>
-            <CardDescription>
-              Introduz o teu número de telefone para aceder
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+
+            <h1 className="text-xl font-bold text-slate-800 text-center">Entrar</h1>
+            <p className="text-sm text-slate-400 text-center mt-1 mb-6">
+              Introduz o teu número de telefone
+            </p>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {errors?.phone && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{errors.phone}</AlertDescription>
-                </Alert>
+                <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-3.5 py-3 text-sm text-red-700">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{errors.phone}</span>
+                </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Número de Telefone</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="840000000"
-                  value={data.phone}
-                  onChange={(e) => setData('phone', e.target.value)}
-                  autoFocus
-                  className={errors?.phone ? 'border-red-500' : ''}
-                />
+              <div className="space-y-1.5">
+                <label htmlFor="phone" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Telefone
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
+                    +244
+                  </span>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="9XXXXXXXX"
+                    value={data.phone}
+                    onChange={(e) => setData('phone', e.target.value)}
+                    autoFocus
+                    className={`pl-14 h-11 rounded-xl border-slate-200 focus:border-brand-primary focus:ring-brand-primary/20 ${errors?.phone ? 'border-red-400' : ''}`}
+                  />
+                </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={processing}>
-                {processing ? 'A verificar...' : 'Entrar'}
+              <Button
+                type="submit"
+                disabled={processing}
+                className="w-full h-11 rounded-xl bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold text-sm shadow-lg shadow-brand-primary/25 transition-all"
+              >
+                {processing ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    A verificar...
+                  </span>
+                ) : 'Entrar'}
               </Button>
             </form>
 
-            <div className="mt-4 space-y-1 text-center text-xs text-slate-500">
-              <p className='mb-4'>
-                É aluno e não tem conta?{' '}
-                <a href="/registar" className="text-slate-700 underline hover:no-underline">
+            <div className="mt-6 pt-5 border-t border-slate-100 space-y-2 text-center text-xs text-slate-400">
+              <p>
+                Aluno sem conta?{' '}
+                <a href="/registar" className="text-brand-primary font-semibold hover:underline">
                   Registar
                 </a>
               </p>
-              <p>Administrador ou professor?{' '}
-                <a href="/login" className="text-slate-700 underline hover:no-underline">
+              <p>
+                Administrador?{' '}
+                <a href="/login" className="text-slate-500 hover:text-slate-700 hover:underline">
                   Aceder aqui
                 </a>
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </PublicLayout>
   );
