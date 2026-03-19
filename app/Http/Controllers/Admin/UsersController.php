@@ -48,16 +48,19 @@ class UsersController extends Controller
         $perPage = in_array((int) $request->input('per_page'), [25, 50, 100]) ? (int) $request->input('per_page') : 25;
 
         $users = $query->paginate($perPage)->withQueryString()->through(fn ($u) => [
-            'id' => $u->id,
-            'name' => $u->name,
-            'email' => $u->email,
-            'phone' => $u->phone,
-            'role' => $u->role->value,
-            'role_label' => $u->role->label(),
-            'classroom_name' => $u->classroom?->name,
-            'grupo_homogeneo' => $u->grupo_homogeneo?->value,
+            'id'                    => $u->id,
+            'name'                  => $u->name,
+            'email'                 => $u->email,
+            'phone'                 => $u->phone,
+            'whatsapp'              => $u->whatsapp,
+            'alt_contact'           => $u->alt_contact,
+            'role'                  => $u->role->value,
+            'role_label'            => $u->role->label(),
+            'classroom_id'          => $u->classroom_id,
+            'classroom_name'        => $u->classroom?->name,
+            'grupo_homogeneo'       => $u->grupo_homogeneo?->value,
             'grupo_homogeneo_label' => $u->grupo_homogeneo?->label(),
-            'attendance_rate' => $u->isStudent() || $u->isTeacher() ? $u->attendanceRatio()['rate'] : null,
+            'attendance_rate'       => $u->isStudent() || $u->isTeacher() ? $u->attendanceRatio()['rate'] : null,
         ]);
 
         return Inertia::render('Admin/Utilizadores', [

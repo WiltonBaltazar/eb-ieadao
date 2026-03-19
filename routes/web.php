@@ -104,6 +104,9 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::get('/matriculas', [EnrollmentsController::class, 'index'])->name('admin.enrollments.index');
     Route::post('/matriculas/bulk', [EnrollmentsController::class, 'bulkEnroll'])->name('admin.enrollments.bulk');
     Route::post('/matriculas/copiar-ano', [EnrollmentsController::class, 'copyFromYear'])->name('admin.enrollments.copy');
+    Route::post('/matriculas/iniciar-ano', [EnrollmentsController::class, 'startYear'])->name('admin.enrollments.start-year');
+    Route::delete('/matriculas/{enrollment}', [EnrollmentsController::class, 'destroy'])->name('admin.enrollments.destroy');
+    Route::delete('/matriculas/ano/{year}', [EnrollmentsController::class, 'destroyYear'])->name('admin.enrollments.destroy-year');
 
     // Reports
     Route::get('/relatorios', [ReportsController::class, 'index'])->name('admin.reports.index');

@@ -129,7 +129,13 @@ class ClassroomsController extends Controller
             $availableYears = collect([$currentYear]);
         }
 
-        $query = $classroom->studentsForYear($year)->with('attendances');
+        $yearSessionIds = StudySession::where('classroom_id', $classroom->id)
+            ->whereIn('status', ['open', 'closed'])
+            ->whereYear('session_date', $year)
+            ->pluck('id');
+
+        $query = $classroom->studentsForYear($year)
+            ->with(['attendances' => fn ($q) => $q->whereIn('study_session_id', $yearSessionIds)]);
 
         if ($request->filled('search')) {
             $s = $request->search;
@@ -144,10 +150,7 @@ class ClassroomsController extends Controller
             $query->where('grupo_homogeneo', $request->grupo_homogeneo);
         }
 
-        $totalSessions = StudySession::where('classroom_id', $classroom->id)
-            ->whereIn('status', ['open', 'closed'])
-            ->whereYear('session_date', $year)
-            ->count();
+        $totalSessions = $yearSessionIds->count();
 
         $sortable = ['name', 'phone', 'grupo_homogeneo'];
         $sortBy = in_array($request->input('sort_by'), $sortable) ? $request->input('sort_by') : 'name';

@@ -28,6 +28,13 @@ class StudySessionsController extends Controller
         $query = StudySession::with('classroom', 'teacher')
             ->withCount('attendances');
 
+        if ($request->filled('classroom_id')) {
+            $query->where('classroom_id', $request->classroom_id);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
         $sortable = ['title', 'session_date', 'status', 'attendances_count'];
         $sortBy = in_array($request->input('sort_by'), $sortable) ? $request->input('sort_by') : 'session_date';
         $sortDir = $request->input('sort_dir') === 'desc' ? 'desc' : 'asc';
@@ -68,7 +75,7 @@ class StudySessionsController extends Controller
             'sessions'   => $sessions,
             'classrooms' => $classrooms,
             'teachers'   => $teachers,
-            'filters'    => $request->only(['sort_by', 'sort_dir', 'per_page']),
+            'filters'    => $request->only(['sort_by', 'sort_dir', 'per_page', 'classroom_id', 'status']),
         ]);
     }
 

@@ -116,23 +116,27 @@ class User extends Authenticatable
         return $this->readiness()->label();
     }
 
-    // Attendance stats
-    public function attendanceRatio(): array
+    // Attendance stats (scoped to a specific academic year)
+    public function attendanceRatio(?int $year = null): array
     {
         if (!$this->classroom_id) {
             return ['attended' => 0, 'total' => 0, 'rate' => 0];
         }
 
-        $total = StudySession::where('classroom_id', $this->classroom_id)
-            ->whereIn('status', ['open', 'closed'])
-            ->count();
+        $year ??= Setting::currentAcademicYear();
 
-        $attended = $this->attendances()->count();
+        $sessionIds = StudySession::where('classroom_id', $this->classroom_id)
+            ->whereIn('status', ['open', 'closed'])
+            ->whereYear('session_date', $year)
+            ->pluck('id');
+
+        $total    = $sessionIds->count();
+        $attended = $this->attendances()->whereIn('study_session_id', $sessionIds)->count();
 
         return [
             'attended' => $attended,
-            'total' => $total,
-            'rate' => $total > 0 ? round(($attended / $total) * 100) : 0,
+            'total'    => $total,
+            'rate'     => $total > 0 ? round(($attended / $total) * 100) : 0,
         ];
     }
 }

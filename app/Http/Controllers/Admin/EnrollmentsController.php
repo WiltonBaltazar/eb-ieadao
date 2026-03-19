@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Carbon;
 
 class EnrollmentsController extends Controller
 {
@@ -58,8 +59,9 @@ class EnrollmentsController extends Controller
 
         return Inertia::render('Admin/Matriculas', [
             'enrollments'    => $enrollments,
-            'classrooms'     => Classroom::where('classroom_type', 'bible_study')->orderBy('name')->get()->map(fn ($c) => ['id' => $c->id, 'name' => $c->name]),
+            'classrooms'     => Classroom::orderBy('name')->get()->map(fn ($c) => ['id' => $c->id, 'name' => $c->name]),
             'year'           => $year,
+            'currentYear'    => $currentYear,
             'availableYears' => $availableYears,
             'filters'        => $request->only(['year', 'classroom_id', 'search']),
         ]);
@@ -143,5 +145,72 @@ class EnrollmentsController extends Controller
         });
 
         return back()->with('success', "{$copied} matrícula(s) copiada(s) de {$fromYear} para {$toYear}.");
+    }
+
+    public function destroy(Enrollment $enrollment): RedirectResponse
+    {
+        $year = $enrollment->academic_year;
+        $enrollment->delete();
+        return back()->with('success', 'Matrícula removida.');
+    }
+
+    public function destroyYear(int $year): RedirectResponse
+    {
+        $deleted = Enrollment::where('academic_year', $year)->delete();
+        return redirect()->route('admin.enrollments.index')
+            ->with('success', "{$deleted} matrícula(s) do ano {$year} eliminada(s).");
+    }
+
+    public function startYear(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'new_year' => 'required|integer|min:2000|max:2100',
+        ]);
+
+        $newYear     = (int) $request->new_year;
+        $currentYear = Setting::currentAcademicYear();
+
+        if ($newYear <= $currentYear) {
+            return back()->withErrors(['new_year' => "O novo ano deve ser superior ao ano atual ({$currentYear})."]);
+        }
+
+        // Copy all active enrollments from the current year to the new year
+        $source = Enrollment::where('academic_year', $currentYear)
+            ->whereNull('transferred_at')
+            ->get();
+
+        $copied = 0;
+
+        DB::transaction(function () use ($source, $newYear, $request, &$copied) {
+            foreach ($source as $enrollment) {
+                $exists = Enrollment::where('student_id', $enrollment->student_id)
+                    ->where('academic_year', $newYear)
+                    ->whereNull('transferred_at')
+                    ->exists();
+
+                if (!$exists) {
+                    Enrollment::create([
+                        'student_id'     => $enrollment->student_id,
+                        'classroom_id'   => $enrollment->classroom_id,
+                        'academic_year'  => $newYear,
+                        'enrolled_at'    => now(),
+                        'enrolled_by_id' => $request->user()?->id,
+                    ]);
+                    $copied++;
+                }
+            }
+
+            // Advance the current academic year setting
+            Setting::where('key', 'current_academic_year')->update(['value' => $newYear]);
+
+            // Sync classroom_id cache on each student's user record
+            foreach ($source as $enrollment) {
+                User::where('id', $enrollment->student_id)
+                    ->update(['classroom_id' => $enrollment->classroom_id]);
+            }
+        });
+
+        return redirect()->route('admin.enrollments.index', ['year' => $newYear])
+            ->with('success', "Ano letivo {$newYear} iniciado. {$copied} aluno(s) matriculado(s).");
     }
 }
