@@ -7,6 +7,8 @@ use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Classroom;
+use App\Models\Enrollment;
+use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -46,16 +48,19 @@ class UsersController extends Controller
         $perPage = in_array((int) $request->input('per_page'), [25, 50, 100]) ? (int) $request->input('per_page') : 25;
 
         $users = $query->paginate($perPage)->withQueryString()->through(fn ($u) => [
-            'id' => $u->id,
-            'name' => $u->name,
-            'email' => $u->email,
-            'phone' => $u->phone,
-            'role' => $u->role->value,
-            'role_label' => $u->role->label(),
-            'classroom_name' => $u->classroom?->name,
-            'grupo_homogeneo' => $u->grupo_homogeneo?->value,
+            'id'                    => $u->id,
+            'name'                  => $u->name,
+            'email'                 => $u->email,
+            'phone'                 => $u->phone,
+            'whatsapp'              => $u->whatsapp,
+            'alt_contact'           => $u->alt_contact,
+            'role'                  => $u->role->value,
+            'role_label'            => $u->role->label(),
+            'classroom_id'          => $u->classroom_id,
+            'classroom_name'        => $u->classroom?->name,
+            'grupo_homogeneo'       => $u->grupo_homogeneo?->value,
             'grupo_homogeneo_label' => $u->grupo_homogeneo?->label(),
-            'attendance_rate' => $u->isStudent() || $u->isTeacher() ? $u->attendanceRatio()['rate'] : null,
+            'attendance_rate'       => $u->isStudent() || $u->isTeacher() ? $u->attendanceRatio()['rate'] : null,
         ]);
 
         return Inertia::render('Admin/Utilizadores', [
@@ -69,10 +74,37 @@ class UsersController extends Controller
 
     public function show(Request $request, User $user): Response
     {
-        $user->load('classroom');
+        $user->load('classroom', 'enrollments.classroom');
 
-        $query = StudySession::where('classroom_id', $user->classroom_id)
+        // Build enrollment history sorted desc by year
+        $enrollmentHistory = $user->enrollments
+            ->sortByDesc('academic_year')
+            ->groupBy('academic_year')
+            ->map(fn ($items, $year) => [
+                'year'           => (int) $year,
+                'classroom_id'   => $items->whereNull('transferred_at')->first()?->classroom_id
+                                    ?? $items->last()?->classroom_id,
+                'classroom_name' => $items->whereNull('transferred_at')->first()?->classroom?->name
+                                    ?? $items->last()?->classroom?->name,
+                'entries'        => $items->map(fn ($e) => [
+                    'classroom_name'  => $e->classroom?->name,
+                    'enrolled_at'     => $e->enrolled_at?->format('d/m/Y'),
+                    'transferred_at'  => $e->transferred_at?->format('d/m/Y'),
+                ])->values(),
+            ])
+            ->values();
+
+        $availableYears = $enrollmentHistory->pluck('year')->sort()->reverse()->values();
+        $currentYear = Setting::currentAcademicYear();
+        $selectedYear = $request->filled('year') ? (int) $request->year : $currentYear;
+
+        // Determine the classroom to query sessions from (based on selected year enrollment)
+        $enrollmentForYear = $user->enrollmentForYear($selectedYear);
+        $classroomIdForSessions = $enrollmentForYear?->classroom_id ?? $user->classroom_id;
+
+        $query = StudySession::where('classroom_id', $classroomIdForSessions)
             ->whereIn('status', ['open', 'closed'])
+            ->whereYear('session_date', $selectedYear)
             ->with('teacher');
 
         // Count totals before pagination
@@ -96,15 +128,15 @@ class UsersController extends Controller
         $sessions = $query->paginate($perPage)->withQueryString()->through(function ($s) use ($attendanceMap) {
             $att = $attendanceMap->get($s->id);
             return [
-                'id'            => $s->id,
-                'title'         => $s->title,
-                'session_date'  => $s->session_date->format('d/m/Y'),
+                'id'               => $s->id,
+                'title'            => $s->title,
+                'session_date'     => $s->session_date->format('d/m/Y'),
                 'session_date_iso' => $s->session_date->format('Y-m-d'),
-                'teacher_name'  => $s->teacher?->name,
-                'attended'      => $att !== null,
-                'method'        => $att?->check_in_method->value,
-                'method_label'  => $att?->check_in_method->label(),
-                'checked_in_at' => $att?->checked_in_at->format('H:i'),
+                'teacher_name'     => $s->teacher?->name,
+                'attended'         => $att !== null,
+                'method'           => $att?->check_in_method->value,
+                'method_label'     => $att?->check_in_method->label(),
+                'checked_in_at'    => $att?->checked_in_at->format('H:i'),
             ];
         });
 
@@ -121,9 +153,12 @@ class UsersController extends Controller
                 'readiness'             => $user->readiness()->value,
                 'readiness_label'       => $user->readinessLabel(),
             ],
-            'sessions' => $sessions,
-            'stats'    => ['attended' => $attendedAll, 'total' => $totalAll, 'rate' => $rate],
-            'filters'  => $request->only(['sort_by', 'sort_dir', 'per_page']),
+            'sessions'          => $sessions,
+            'stats'             => ['attended' => $attendedAll, 'total' => $totalAll, 'rate' => $rate],
+            'filters'           => $request->only(['sort_by', 'sort_dir', 'per_page', 'year']),
+            'enrollmentHistory' => $enrollmentHistory,
+            'availableYears'    => $availableYears->isEmpty() ? [$currentYear] : $availableYears->toArray(),
+            'selectedYear'      => $selectedYear,
         ]);
     }
 

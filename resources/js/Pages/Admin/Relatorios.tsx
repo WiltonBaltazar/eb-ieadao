@@ -18,7 +18,7 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { Download, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import { Download, AlertTriangle } from 'lucide-react';
 import { PageProps } from '@/types';
 
 interface ClassroomOption {
@@ -34,14 +34,6 @@ interface ChartPoint {
 }
 
 interface Props extends PageProps {
-  byClassroom: Array<{
-    id: number;
-    name: string;
-    is_active: boolean;
-    students_count: number;
-    sessions_count: number;
-    total_attendances: number;
-  }>;
   belowThreshold: Array<{
     id: number;
     name: string;
@@ -53,6 +45,7 @@ interface Props extends PageProps {
   }>;
   threshold: number;
   classrooms: ClassroomOption[];
+  availableYears: number[];
 }
 
 function defaultRange(): { from: string; to: string } {
@@ -62,11 +55,14 @@ function defaultRange(): { from: string; to: string } {
   return { from, to };
 }
 
-export default function Relatorios({ byClassroom, belowThreshold, threshold, classrooms }: Props) {
+export default function Relatorios({ belowThreshold, threshold, classrooms, availableYears }: Props) {
   const defaults = defaultRange();
   const [from, setFrom] = useState(defaults.from);
   const [to, setTo] = useState(defaults.to);
   const [classroomId, setClassroomId] = useState('all');
+  const [exportYear, setExportYear] = useState<string>(
+    availableYears.length > 0 ? String(availableYears[0]) : 'all'
+  );
   const [compare, setCompare] = useState(false);
   const [chartData, setChartData] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(false);
@@ -85,7 +81,6 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
       const previous: ChartPoint[] = json.previous ?? [];
       setHasPrevious(previous.length > 0);
 
-      // Merge current & previous into unified chart data
       const merged = current.map((point, i) => {
         const row: Record<string, unknown> = {
           label: point.label,
@@ -136,16 +131,14 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
         <h1 className="text-2xl font-bold text-slate-800">Relatórios</h1>
 
         <Tabs defaultValue="visao-geral">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
             <TabsTrigger value="registos">Registos</TabsTrigger>
             <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
-            <TabsTrigger value="por-turma">Por Turma</TabsTrigger>
           </TabsList>
 
           {/* Visão Geral */}
           <TabsContent value="visao-geral" className="space-y-4">
-            {/* Filters */}
             <Card>
               <CardContent className="pt-4 pb-3">
                 <div className="flex flex-wrap gap-3 items-end">
@@ -184,7 +177,6 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
               </CardContent>
             </Card>
 
-            {/* Chart */}
             <Card className="transition-all duration-300 hover:shadow-md border-slate-200/60 relative group">
               <div className="absolute inset-0 bg-gradient-to-t from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-xl" />
               <CardHeader className="relative">
@@ -236,17 +228,40 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
           {/* Registos */}
           <TabsContent value="registos">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <CardTitle className="text-base">Registos de Presença</CardTitle>
-                <Button asChild size="sm" variant="outline">
-                  <a href="/admin/relatorios/exportar" download>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Select value={exportYear} onValueChange={setExportYear}>
+                    <SelectTrigger className="h-8 w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os anos</SelectItem>
+                      {availableYears.map((y) => (
+                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      window.location.href = exportYear === 'all'
+                        ? '/admin/relatorios/exportar'
+                        : `/admin/relatorios/exportar?year=${exportYear}`;
+                    }}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Exportar CSV
-                  </a>
-                </Button>
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-slate-500">Use o botão acima para exportar todos os registos em CSV.</p>
+                <p className="text-sm text-slate-500">
+                  {exportYear === 'all'
+                    ? 'A exportar todos os registos de presença.'
+                    : `A exportar registos de presença do ano ${exportYear}.`}
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -281,51 +296,6 @@ export default function Relatorios({ byClassroom, belowThreshold, threshold, cla
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* Por Turma */}
-          <TabsContent value="por-turma">
-            <div className="grid gap-3 md:grid-cols-2">
-              {byClassroom.map((c) => (
-                <Card key={c.id} className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-slate-200/60 overflow-hidden relative group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      {c.name}
-                      {!c.is_active && <Badge variant="outline" className="text-slate-400 text-xs">Inativa</Badge>}
-                    </CardTitle>
-                    <Button asChild size="sm" variant="outline" className="h-7 px-2 gap-1 text-xs text-green-700 border-green-300 hover:bg-green-50 shrink-0">
-                      <a href={`/admin/relatorios/turma/${c.id}/exportar-excel`} download={`assiduidade_${c.name}.xlsx`}>
-                        <FileSpreadsheet className="h-3.5 w-3.5" />
-                        Excel
-                      </a>
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm relative">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Estudantes</span>
-                      <span className="font-medium">{c.students_count}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Sessões</span>
-                      <span className="font-medium">{c.sessions_count}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Total Presenças</span>
-                      <span className="font-medium">{c.total_attendances}</span>
-                    </div>
-                    {c.sessions_count > 0 && c.students_count > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Taxa Média</span>
-                        <span className="font-medium text-green-600">
-                          {Math.round((c.total_attendances / (c.sessions_count * c.students_count)) * 100)}%
-                        </span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </TabsContent>
         </Tabs>
       </div>

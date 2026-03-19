@@ -23,6 +23,7 @@ import {
   X,
   Eye,
   FileSpreadsheet,
+  CalendarDays,
 } from 'lucide-react';
 import { PageProps, PaginatedData } from '@/types';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
@@ -55,7 +56,9 @@ interface Props extends PageProps {
   students: PaginatedData<StudentRow>;
   totalSessions: number;
   gruposOptions: Array<{ value: string; label: string }>;
-  filters: { search?: string; grupo_homogeneo?: string; sort_by?: string; sort_dir?: string; per_page?: string };
+  filters: { search?: string; grupo_homogeneo?: string; sort_by?: string; sort_dir?: string; per_page?: string; year?: string };
+  year: number;
+  availableYears: number[];
 }
 
 const readinessColors: Record<string, string> = {
@@ -77,6 +80,8 @@ export default function TurmaAlunos({
   totalSessions,
   gruposOptions,
   filters,
+  year,
+  availableYears,
 }: Props) {
   const [search, setSearch] = useState(filters.search ?? '');
   const basePath = `/admin/turmas/${classroom.id}/alunos`;
@@ -131,11 +136,14 @@ export default function TurmaAlunos({
             </p>
           </div>
           <div className="flex gap-2">
-            <Button asChild size="sm" variant="outline" className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50">
-              <a href={`/admin/relatorios/turma/${classroom.id}/exportar-excel`} download>
-                <FileSpreadsheet className="h-4 w-4" />
-                Excel
-              </a>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
+              onClick={() => { window.location.href = `/admin/relatorios/turma/${classroom.id}/exportar-excel?year=${year}`; }}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Excel {year}
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/turmas">
@@ -178,6 +186,23 @@ export default function TurmaAlunos({
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="flex flex-wrap gap-3 items-center">
+              {availableYears.length > 1 && (
+                <Select
+                  value={String(year)}
+                  onValueChange={(v) => applyFilter('year', v)}
+                >
+                  <SelectTrigger className="h-8 w-28">
+                    <CalendarDays className="h-3.5 w-3.5 mr-1 text-slate-400" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
               <div className="flex gap-2 flex-1 min-w-48">
                 <Input
                   placeholder="Pesquisar por nome ou telefone…"
@@ -252,7 +277,7 @@ export default function TurmaAlunos({
               <>
                 {/* Desktop table */}
                 <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm admin-table">
                     <thead className="border-b border-slate-100 bg-slate-50/50">
                       <tr>
                         <SortableTh label="Nome" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />

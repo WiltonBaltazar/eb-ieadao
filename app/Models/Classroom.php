@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -20,7 +21,7 @@ class Classroom extends Model
         'is_active' => 'boolean',
     ];
 
-public function teachers(): BelongsToMany
+    public function teachers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'classroom_teacher');
     }
@@ -33,5 +34,19 @@ public function teachers(): BelongsToMany
     public function studySessions(): HasMany
     {
         return $this->hasMany(StudySession::class);
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    public function studentsForYear(int $year): Builder
+    {
+        return User::whereHas('enrollments', fn ($q) => $q
+            ->where('classroom_id', $this->id)
+            ->where('academic_year', $year)
+            ->whereNull('transferred_at')
+        );
     }
 }

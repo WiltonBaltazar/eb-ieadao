@@ -810,7 +810,7 @@ export default function SessaoPresencas({
               <>
                 {/* Desktop */}
                 <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm admin-table">
                     <thead className="border-b border-slate-100 bg-slate-50/50">
                       <tr>
                         <th className="w-10 px-4 py-2.5">

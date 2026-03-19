@@ -27,19 +27,19 @@ export function SortableTh({ label, column, currentSort, currentDir, className =
 
   return (
     <th
-      className={`text-left px-4 py-3 text-slate-500 font-medium cursor-pointer select-none hover:text-slate-700 transition-colors ${className}`}
+      className={`bg-slate-50/80 text-left px-4 py-3 text-slate-600 font-semibold text-xs uppercase tracking-wide cursor-pointer select-none hover:text-slate-800 transition-colors ${className}`}
       onClick={() => onSort(column, nextDir)}
     >
       <span className="inline-flex items-center gap-1">
         {label}
         {isActive ? (
           currentDir === 'asc' ? (
-            <ArrowUp className="h-3.5 w-3.5 text-slate-700" />
+            <ArrowUp className="h-3 w-3 text-slate-700" />
           ) : (
-            <ArrowDown className="h-3.5 w-3.5 text-slate-700" />
+            <ArrowDown className="h-3 w-3 text-slate-700" />
           )
         ) : (
-          <ArrowUpDown className="h-3.5 w-3.5 text-slate-300" />
+          <ArrowUpDown className="h-3 w-3 text-slate-300" />
         )}
       </span>
     </th>
@@ -86,26 +86,30 @@ export function TablePagination<T>({
       </div>
 
       {data.last_page > 1 && (
-        <div className="flex gap-1.5">
-          {data.links.map((link, i) =>
-            link.url ? (
+        <div className="flex gap-1.5 flex-wrap">
+          {data.links.map((link, i) => {
+            const isPrev = link.label === '&laquo; Previous';
+            const isNext = link.label === 'Next &raquo;';
+            const label = isPrev ? <ChevronLeft className="h-4 w-4" /> :
+                          isNext ? <ChevronRight className="h-4 w-4" /> :
+                          link.label === '...' ? '…' : link.label;
+
+            if (!link.url) {
+              return (
+                <Button key={i} variant="outline" size="sm" className="h-8 px-3 opacity-40 cursor-default" disabled>
+                  {label}
+                </Button>
+              );
+            }
+
+            return (
               <Link key={i} href={link.url}>
-                <Button
-                  variant={link.active ? 'default' : 'outline'}
-                  size="sm"
-                  className="h-8 px-3"
-                >
-                  {link.label === '&laquo; Previous' ? (
-                    <ChevronLeft className="h-4 w-4" />
-                  ) : link.label === 'Next &raquo;' ? (
-                    <ChevronRight className="h-4 w-4" />
-                  ) : (
-                    link.label
-                  )}
+                <Button variant={link.active ? 'default' : 'outline'} size="sm" className="h-8 px-3">
+                  {label}
                 </Button>
               </Link>
-            ) : null,
-          )}
+            );
+          })}
         </div>
       )}
     </div>

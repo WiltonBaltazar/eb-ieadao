@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/Components/ui/dialog';
-import { Plus, QrCode, Play, Square, RefreshCw, Trash2, Users, Pencil, RotateCcw, ChevronDown, Search } from 'lucide-react';
+import { Plus, QrCode, Play, Square, RefreshCw, Trash2, Users, Pencil, RotateCcw, ChevronDown, Search, X } from 'lucide-react';
 import { PageProps, PaginatedData, StudySession } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
@@ -140,10 +140,16 @@ function SearchableSelect({
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
+const statusOptions = [
+  { value: 'draft', label: 'Rascunho' },
+  { value: 'open', label: 'Aberta' },
+  { value: 'closed', label: 'Fechada' },
+];
+
 export default function Sessoes({ sessions, classrooms, teachers, filters }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [editItem, setEditItem] = useState<StudySession | null>(null);
-  const { handleSort: baseHandleSort, handlePerPage: baseHandlePerPage } = useTableNav('/admin/sessoes', filters);
+  const { navigate, handleSort: baseHandleSort, handlePerPage: baseHandlePerPage } = useTableNav('/admin/sessoes', filters);
   const { selectedIds, selectedCount, isAllSelected, isIndeterminate, isSelected, toggleOne, toggleAll, clearSelection } = useBulkSelect(sessions.data);
 
   const handleSort = (col: string, dir: string) => { clearSelection(); baseHandleSort(col, dir); };
@@ -235,6 +241,42 @@ export default function Sessoes({ sessions, classrooms, teachers, filters }: Pro
           </Button>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <select
+            value={filters.classroom_id ?? ''}
+            onChange={(e) => { clearSelection(); navigate({ classroom_id: e.target.value, page: 1 }); }}
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="">Todas as turmas</option>
+            {classrooms.map((c) => (
+              <option key={c.id} value={String(c.id)}>{c.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.status ?? ''}
+            onChange={(e) => { clearSelection(); navigate({ status: e.target.value, page: 1 }); }}
+            className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="">Todos os estados</option>
+            {statusOptions.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+
+          {(filters.classroom_id || filters.status) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-slate-500"
+              onClick={() => { clearSelection(); navigate({ classroom_id: '', status: '', page: 1 }); }}
+            >
+              <X className="h-3.5 w-3.5 mr-1" />Limpar filtros
+            </Button>
+          )}
+        </div>
+
         {/* Create dialog */}
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogContent className="max-w-md">
@@ -324,7 +366,7 @@ export default function Sessoes({ sessions, classrooms, teachers, filters }: Pro
               onSelectAll={toggleAll}
             />
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm admin-table">
                 <thead className="border-b border-slate-100">
                   <tr>
                     <th className="w-10 px-4 py-3">

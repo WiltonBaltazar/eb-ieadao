@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\GrupoHomogeneo;
 use App\Http\Controllers\Controller;
 use App\Models\Classroom;
+use App\Models\Enrollment;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -70,7 +73,31 @@ class StudentsController extends Controller
         ]);
 
         $old = $user->classroom?->name ?? 'Sem turma';
-        $user->update(['classroom_id' => $request->classroom_id ?: null]);
+        $newClassroomId = $request->classroom_id ?: null;
+        $year = Setting::currentAcademicYear();
+
+        DB::transaction(function () use ($user, $newClassroomId, $year, $request) {
+            // Stamp transferred_at on any active enrollment for this year
+            Enrollment::where('student_id', $user->id)
+                ->where('academic_year', $year)
+                ->whereNull('transferred_at')
+                ->update(['transferred_at' => now()]);
+
+            // Create new enrollment if a classroom is chosen
+            if ($newClassroomId) {
+                Enrollment::create([
+                    'student_id'      => $user->id,
+                    'classroom_id'    => $newClassroomId,
+                    'academic_year'   => $year,
+                    'enrolled_at'     => now(),
+                    'enrolled_by_id'  => $request->user()?->id,
+                ]);
+            }
+
+            // Sync the cache column
+            $user->update(['classroom_id' => $newClassroomId]);
+        });
+
         $new = $user->fresh()->classroom?->name ?? 'Sem turma';
 
         return back()->with('success', "{$user->name} transferido(a): {$old} → {$new}.");
