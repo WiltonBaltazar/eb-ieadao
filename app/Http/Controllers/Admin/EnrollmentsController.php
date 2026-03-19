@@ -47,7 +47,7 @@ class EnrollmentsController extends Controller
             );
         }
 
-        $enrollments = $query->orderBy('id')->paginate(50)->withQueryString()->through(fn ($e) => [
+        $enrollments = $query->orderByDesc('id')->paginate(50)->withQueryString()->through(fn ($e) => [
             'id'             => $e->id,
             'student_id'     => $e->student_id,
             'student_name'   => $e->student?->name,

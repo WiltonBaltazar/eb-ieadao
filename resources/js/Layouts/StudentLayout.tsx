@@ -1,7 +1,6 @@
 import React from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { PageProps } from '@/types';
-import { Button } from '@/Components/ui/button';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import {
   DropdownMenu,
@@ -10,90 +9,86 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/Components/ui/dropdown-menu';
-import { Home, BookOpen, User, LogOut, Menu, GraduationCap } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger } from '@/Components/ui/sheet';
+import { Home, BookOpen, CalendarCheck, User, LogOut } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface StudentLayoutProps {
-  children: React.ReactNode;
-}
+const navItems = [
+  { href: '/meu-perfil', label: 'Início', icon: Home, exact: true },
+  { href: '/minhas-aulas', label: 'Aulas', icon: BookOpen },
+  { href: '/minhas-presencas', label: 'Presenças', icon: CalendarCheck },
+  { href: '/perfil/editar', label: 'Perfil', icon: User },
+];
 
-export default function StudentLayout({ children }: StudentLayoutProps) {
-  const { auth } = usePage<PageProps>().props;
+export default function StudentLayout({ children }: { children: React.ReactNode }) {
+  const page = usePage<PageProps>();
+  const { auth } = page.props;
   const user = auth.user;
+  const current = page.url.split('?')[0];
 
-  const navLinks = [
-    { href: '/meu-perfil', label: 'Início', icon: Home },
-    { href: '/minhas-aulas', label: 'Aulas', icon: GraduationCap },
-    { href: '/minhas-presencas', label: 'Presenças', icon: BookOpen },
-    { href: '/perfil/editar', label: 'Perfil', icon: User },
-  ];
+  const isActive = (href: string, exact?: boolean) =>
+    exact ? current === href : current.startsWith(href);
+
+  const initials = user?.name
+    ?.split(' ')
+    .slice(0, 2)
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase() ?? 'E';
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64">
-                <div className="mt-6 flex flex-col gap-2">
-                  {navLinks.map(({ href, label, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-slate-700 hover:bg-slate-100 transition-colors"
-                    >
-                      <Icon className="h-5 w-5" />
-                      {label}
-                    </Link>
-                  ))}
-                  <div className="border-t border-slate-200 my-2" />
-                  <Link
-                    href="/sair"
-                    method="post"
-                    as="button"
-                    className="flex items-center gap-3 px-3 py-2 rounded-md text-red-600 hover:bg-red-50 transition-colors w-full text-left"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    Sair
-                  </Link>
-                </div>
-              </SheetContent>
-            </Sheet>
-            <span className="font-semibold text-slate-800 text-sm">IEADAO Presenças</span>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-brand-primary sticky top-0 z-40 shadow-lg shadow-brand-primary/20">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+          {/* Brand */}
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-brand-accent flex items-center justify-center shadow-md shadow-brand-accent/40">
+              <span className="text-white font-black text-[10px] tracking-tight">IE</span>
+            </div>
+            <div className="leading-none">
+              <span className="text-white font-bold text-sm block">IEADAO</span>
+              <span className="text-white/40 text-[9px]">Presenças</span>
+            </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-0.5">
+            {navItems.map(({ href, label, icon: Icon, exact }) => {
+              const active = isActive(href, exact);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                    active
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/55 hover:text-white hover:bg-white/10'
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              );
+            })}
           </nav>
 
+          {/* Avatar dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 h-9 px-2">
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className="text-xs bg-slate-200">
-                    {user?.name?.charAt(0)?.toUpperCase() ?? 'E'}
+              <button className="focus:outline-none rounded-full ring-2 ring-white/20 hover:ring-white/50 transition-all">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs bg-brand-accent text-white font-bold">
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden md:block text-sm text-slate-700 max-w-[6rem] truncate">
-                  {user?.name}
-                </span>
-              </Button>
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-52">
+              <div className="px-3 py-2 border-b border-slate-100 mb-1">
+                <p className="text-sm font-semibold text-slate-800 truncate">{user?.name}</p>
+                <p className="text-xs text-slate-400">Estudante</p>
+              </div>
               <DropdownMenuItem asChild>
                 <Link href="/perfil/editar">
                   <User className="mr-2 h-4 w-4" />
@@ -101,19 +96,53 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/sair" method="post" as="button" className="w-full text-red-600">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sair
-                </Link>
+              <DropdownMenuItem
+                onClick={() => router.post('/sair')}
+                className="text-red-600 focus:text-red-600"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
-      <main className="max-w-4xl mx-auto px-4 py-6">
+
+      {/* Page content — extra bottom padding on mobile for bottom nav */}
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-5 pb-24 md:pb-8">
         {children}
       </main>
+
+      {/* Bottom nav — mobile only */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200/80 z-40"
+        style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.07)' }}>
+        <div className="grid grid-cols-4 h-16 max-w-2xl mx-auto">
+          {navItems.map(({ href, label, icon: Icon, exact }) => {
+            const active = isActive(href, exact);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="relative flex flex-col items-center justify-center gap-0.5 transition-colors"
+              >
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] bg-brand-primary rounded-full" />
+                )}
+                <Icon className={cn(
+                  'h-5 w-5 transition-colors',
+                  active ? 'text-brand-primary' : 'text-slate-400'
+                )} />
+                <span className={cn(
+                  'text-[10px] font-medium transition-colors',
+                  active ? 'text-brand-primary' : 'text-slate-400'
+                )}>
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
