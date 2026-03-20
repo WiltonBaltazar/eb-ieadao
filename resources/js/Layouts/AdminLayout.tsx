@@ -120,7 +120,7 @@ function SidebarNav({ collapsed }: { collapsed: boolean }) {
 }
 
 export default function AdminLayout({ children, breadcrumbs }: AdminLayoutProps) {
-  const { auth } = usePage<PageProps>().props;
+  const { auth, appName } = usePage<PageProps>().props;
   const [collapsed, setCollapsed] = useState(false);
 
   const handleLogout = () => {
@@ -155,7 +155,7 @@ export default function AdminLayout({ children, breadcrumbs }: AdminLayoutProps)
                 <span className="text-white font-black text-xs tracking-tight">IE</span>
               </div>
               <div className="min-w-0">
-                <span className="text-white font-bold text-sm tracking-tight block leading-tight truncate">IEADAO</span>
+                <span className="text-white font-bold text-sm tracking-tight block leading-tight truncate">{appName}</span>
                 <span className="text-white/35 text-[10px] leading-none">Painel Admin</span>
               </div>
             </div>
@@ -204,7 +204,7 @@ export default function AdminLayout({ children, breadcrumbs }: AdminLayoutProps)
                   <span className="text-white font-black text-xs">IE</span>
                 </div>
                 <div>
-                  <span className="text-white font-bold text-sm block leading-tight">IEADAO</span>
+                  <span className="text-white font-bold text-sm block leading-tight">{appName}</span>
                   <span className="text-white/35 text-[10px]">Painel Admin</span>
                 </div>
               </div>

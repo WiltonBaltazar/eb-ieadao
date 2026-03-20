@@ -21,7 +21,7 @@ const navItems = [
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const page = usePage<PageProps>();
-  const { auth } = page.props;
+  const { auth, appName } = page.props;
   const user = auth.user;
   const current = page.url.split('?')[0];
 
@@ -46,7 +46,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               <span className="text-white font-black text-[10px] tracking-tight">IE</span>
             </div>
             <div className="leading-none">
-              <span className="text-white font-bold text-sm block">IEADAO</span>
+              <span className="text-white font-bold text-sm block">{appName}</span>
               <span className="text-white/40 text-[9px]">Presenças</span>
             </div>
           </div>
