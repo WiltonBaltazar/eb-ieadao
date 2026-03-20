@@ -14,7 +14,6 @@ interface Props extends PageProps {
     qr_ttl_minutes: number;
     attendance_threshold: number;
     app_name: string;
-    current_academic_year: number;
   };
 }
 
@@ -24,7 +23,6 @@ export default function Definicoes({ settings }: Props) {
     qr_ttl_minutes: settings.qr_ttl_minutes,
     attendance_threshold: settings.attendance_threshold,
     app_name: settings.app_name,
-    current_academic_year: settings.current_academic_year,
   });
 
   const handleSubmit: FormEventHandler = (e) => {
@@ -89,24 +87,6 @@ export default function Definicoes({ settings }: Props) {
                   onChange={(e) => setData('attendance_threshold', Number(e.target.value))}
                 />
                 <p className="text-xs text-slate-500">Estudantes abaixo desta % aparecem no relatório de acompanhamento.</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Matrículas</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="academic_year">Ano Letivo Atual</Label>
-                <Input
-                  id="academic_year"
-                  type="number"
-                  min={2000}
-                  max={2100}
-                  value={data.current_academic_year}
-                  onChange={(e) => setData('current_academic_year', Number(e.target.value))}
-                />
-                <p className="text-xs text-slate-500">Usado para registar e filtrar matrículas anuais.</p>
               </div>
             </CardContent>
           </Card>

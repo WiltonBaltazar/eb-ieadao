@@ -324,8 +324,8 @@ export default function Turmas({ classrooms, teachers, filters, errors }: Props)
                         <div className="flex items-center justify-end gap-1">
                           <Button asChild size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-slate-600">
                             <Link href={`/admin/turmas/${c.id}/alunos`}>
-                              <Users className="h-3.5 w-3.5" />
-                              Alunos
+                              <Users className="h-3.5 w-3.5" /> ver
+                              alunos
                               <span className="font-semibold">({c.students_count ?? 0})</span>
                             </Link>
                           </Button>

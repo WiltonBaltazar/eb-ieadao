@@ -145,10 +145,24 @@ export default function Registar({
               <Button type="submit" className="w-full" disabled={processing}>
                 {processing ? 'A registar...' : studySession ? 'Registar e Confirmar Presença' : 'Criar Conta'}
               </Button>
+              <div className="mt-6 pt-5 border-t border-slate-100 space-y-2 text-center text-xs text-slate-400">
+                <p>
+                  Aluno?{' '}
+                  <a href="/entrar" className="text-brand-primary font-semibold hover:underline">
+                    Aceder aqui
+                  </a>
+                </p>
+                <p>
+                  Administrador?{' '}
+                  <a href="/login" className="text-slate-500 hover:text-slate-700 hover:underline">
+                    Aceder aqui
+                  </a>
+                </p>
+              </div>
             </form>
           </CardContent>
         </Card>
       </div>
-    </PublicLayout>
+    </PublicLayout >
   );
 }

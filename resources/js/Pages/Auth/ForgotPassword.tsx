@@ -1,9 +1,9 @@
-import InputError from '@/Components/InputError';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
+import PublicLayout from '@/Layouts/PublicLayout';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Mail, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPassword({ status }: { status?: string }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -12,45 +12,84 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-
         post(route('password.email'));
     };
 
     return (
-        <GuestLayout>
-            <Head title="Forgot Password" />
+        <PublicLayout>
+            <Head title="Recuperar Palavra-passe — IEADAO" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                Forgot your password? No problem. Just let us know your email
-                address and we will email you a password reset link that will
-                allow you to choose a new one.
+            <div className="w-full max-w-sm">
+                <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 overflow-hidden">
+                    <div className="h-1 bg-brand-accent" />
+
+                    <div className="px-6 pt-6 pb-7">
+                        <div className="flex justify-center mb-5">
+                            <div className="h-14 w-14 rounded-2xl bg-brand-primary flex items-center justify-center shadow-lg shadow-brand-primary/30">
+                                <Mail className="h-6 w-6 text-white" />
+                            </div>
+                        </div>
+
+                        <h1 className="text-xl font-bold text-slate-800 text-center">Recuperar Palavra-passe</h1>
+                        <p className="text-sm text-slate-400 text-center mt-1 mb-6">
+                            Indica o teu email e enviamos um link para redefinir a palavra-passe.
+                        </p>
+
+                        {status && (
+                            <div className="flex items-center gap-2.5 bg-green-50 border border-green-200 rounded-xl px-3.5 py-3 text-sm text-green-700 mb-4">
+                                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                <span>{status}</span>
+                            </div>
+                        )}
+
+                        <form onSubmit={submit} className="space-y-4">
+                            {errors.email && (
+                                <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-3.5 py-3 text-sm text-red-700">
+                                    <AlertCircle className="h-4 w-4 shrink-0" />
+                                    <span>{errors.email}</span>
+                                </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                                <label htmlFor="email" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                    Email
+                                </label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    autoFocus
+                                    autoComplete="email"
+                                    value={data.email}
+                                    onChange={(e) => setData('email', e.target.value)}
+                                    className={`h-11 rounded-xl border-slate-200 focus:border-brand-primary focus:ring-brand-primary/20 ${errors.email ? 'border-red-400' : ''}`}
+                                />
+                            </div>
+
+                            <Button
+                                type="submit"
+                                disabled={processing}
+                                className="w-full h-11 rounded-xl bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold text-sm shadow-lg shadow-brand-primary/25 transition-all"
+                            >
+                                {processing ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                                        A enviar...
+                                    </span>
+                                ) : 'Enviar Link'}
+                            </Button>
+                        </form>
+
+                        <div className="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-400">
+                            <p>
+                                Lembrou-se?{' '}
+                                <Link href={route('login')} className="text-brand-primary font-semibold hover:underline">
+                                    Voltar ao login
+                                </Link>
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
-
-            <form onSubmit={submit}>
-                <TextInput
-                    id="email"
-                    type="email"
-                    name="email"
-                    value={data.email}
-                    className="mt-1 block w-full"
-                    isFocused={true}
-                    onChange={(e) => setData('email', e.target.value)}
-                />
-
-                <InputError message={errors.email} className="mt-2" />
-
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Email Password Reset Link
-                    </PrimaryButton>
-                </div>
-            </form>
-        </GuestLayout>
+        </PublicLayout>
     );
 }
