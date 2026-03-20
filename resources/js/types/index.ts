@@ -69,6 +69,7 @@ export interface PaginatedData<T> {
 }
 
 export interface PageProps {
+  appName: string;
   auth: {
     user: User | null;
   };
