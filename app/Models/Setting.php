@@ -35,6 +35,6 @@ class Setting extends Model
 
     public static function currentAcademicYear(): int
     {
-        return (int) static::get('current_academic_year', now()->year);
+        return now()->year;
     }
 }

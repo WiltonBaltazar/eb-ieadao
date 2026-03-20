@@ -247,11 +247,11 @@ export default function Dashboard({
           {/* Recent Sessions */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Sessões Recentes</CardTitle>
+              <CardTitle className="text-base">Aulas Recentes</CardTitle>
             </CardHeader>
             <CardContent className="px-0">
               {recentSessions.length === 0 ? (
-                <p className="px-6 py-4 text-sm text-slate-500">Nenhuma sessão encontrada.</p>
+                <p className="px-6 py-4 text-sm text-slate-500">Nenhuma aula encontrada.</p>
               ) : (
                 <div className="divide-y divide-slate-100/60">
                   {recentSessions.map((s) => (
@@ -275,7 +275,7 @@ export default function Dashboard({
           <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-base text-brand-primary">
-                Melhores Presenças (acima de {threshold}%)
+                Alunos mais assíduos (acima de {threshold}%)
               </CardTitle>
               <Link
                 href="/admin/ranking"

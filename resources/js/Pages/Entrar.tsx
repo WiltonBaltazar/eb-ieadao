@@ -49,12 +49,12 @@ export default function Entrar({ errors }: EntrarPageProps) {
                 </label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
-                    +244
+                    +258
                   </span>
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="9XXXXXXXX"
+                    placeholder="8XXXXXXXX"
                     value={data.phone}
                     onChange={(e) => setData('phone', e.target.value)}
                     autoFocus
