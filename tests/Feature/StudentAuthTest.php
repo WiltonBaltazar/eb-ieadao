@@ -27,10 +27,11 @@ class StudentAuthTest extends TestCase
         $this->assertAuthenticatedAs($student);
     }
 
-    public function test_login_fails_for_unknown_phone(): void
+    public function test_login_redirects_unknown_phone_to_registration(): void
     {
         $response = $this->post('/entrar', ['phone' => '999000000']);
-        $response->assertSessionHasErrors('phone');
+        $response->assertRedirect();
+        $this->assertStringContainsString('registar', $response->headers->get('Location'));
     }
 
     public function test_login_fails_for_admin_phone_lookup(): void
