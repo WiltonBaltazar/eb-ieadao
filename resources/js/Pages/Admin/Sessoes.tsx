@@ -426,7 +426,7 @@ export default function Sessoes({ sessions, classrooms, teachers, filters }: Pro
                                 <RefreshCw className="h-3.5 w-3.5" />Código
                               </Button>
                               <Button asChild size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs text-purple-700">
-                                <Link href={`/qr/sessao/${s.id}`}>
+                                <Link href={`/qr/sessao/${s.id}`} target="_blank">
                                   <QrCode className="h-3.5 w-3.5" />QR
                                 </Link>
                               </Button>

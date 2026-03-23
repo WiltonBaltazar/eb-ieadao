@@ -81,18 +81,23 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
       const previous: ChartPoint[] = json.previous ?? [];
       setHasPrevious(previous.length > 0);
 
-      const merged = current.map((point, i) => {
-        const row: Record<string, unknown> = {
-          label: point.label,
-          date: point.date,
-          Presenças: point.count,
-        };
-        if (previous[i]) {
-          row['Período anterior'] = previous[i].count;
-          row['prevLabel'] = previous[i].label;
-        }
-        return row;
-      });
+      const merged = current
+        .map((point, i) => {
+          const prev = previous[i];
+          const row: Record<string, unknown> = {
+            label: point.label,
+            date: point.date,
+          };
+          if (prev) {
+            row['Período anterior'] = prev.count;
+            row['prevLabel'] = prev.label;
+          }
+          row['Presenças'] = point.count;
+          return row;
+        })
+        .filter((row) =>
+          (row['Presenças'] as number) > 0 || (row['Período anterior'] as number) > 0
+        );
 
       setChartData(merged);
     } catch {
@@ -214,10 +219,10 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                         }}
                       />
                       {hasPrevious && <Legend />}
-                      <Bar dataKey="Presenças" fill="#1A1D6B" radius={[4, 4, 0, 0]} />
                       {hasPrevious && (
                         <Bar dataKey="Período anterior" fill="#F9AF0B" radius={[4, 4, 0, 0]} />
                       )}
+                      <Bar dataKey="Presenças" fill="#1A1D6B" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
