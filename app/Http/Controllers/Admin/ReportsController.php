@@ -115,17 +115,16 @@ class ReportsController extends Controller
             $byDate[$date] = ($byDate[$date] ?? 0) + $session->attendances->count();
         }
 
-        // Fill in all days in the range
-        $period = CarbonPeriod::create($from, $to);
+        // Only return days that actually had sessions, sorted chronologically
         $result = [];
-        foreach ($period as $day) {
-            $date = $day->format('Y-m-d');
+        foreach ($byDate as $date => $count) {
             $result[] = [
-                'date' => $date,
-                'label' => $day->format('d/m'),
-                'count' => $byDate[$date] ?? 0,
+                'date'  => $date,
+                'label' => Carbon::parse($date)->format('d/m'),
+                'count' => $count,
             ];
         }
+        usort($result, fn ($a, $b) => strcmp($a['date'], $b['date']));
 
         return $result;
     }
