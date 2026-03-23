@@ -101,7 +101,7 @@ export default function SessaoQr({ studySession, qrSvg, checkInUrl, canManage }:
             <Button
               asChild
               variant="ghost"
-              className="text-slate-400 hover:text-white"
+              className="text-slate-400 hover:text-black"
             >
               <a href="/admin/sessoes">← Voltar</a>
             </Button>
