@@ -83,6 +83,9 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
     router.get('/admin/utilizadores', { ...filters, [key]: value }, { preserveState: true });
   };
 
+  const [newRole, setNewRole]       = useState('');
+  const [changingRole, setChangingRole] = useState(false);
+
   const editForm = useForm({
     name: '',
     email: '',
@@ -96,6 +99,7 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
 
   const openEdit = (u: UserRow) => {
     setEditUser(u);
+    setNewRole(u.role);
     editForm.setData({
       name: u.name,
       email: u.email ?? '',
@@ -114,6 +118,19 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
     editForm.put(`/admin/utilizadores/${editUser.id}`, {
       onSuccess: () => setEditUser(null),
     });
+  };
+
+  const handleUpdateRole = () => {
+    if (!editUser || !newRole || newRole === editUser.role) return;
+    setChangingRole(true);
+    router.patch(
+      `/admin/utilizadores/${editUser.id}/papel`,
+      { role: newRole },
+      {
+        onSuccess: () => { setEditUser(null); setChangingRole(false); },
+        onError:   () => setChangingRole(false),
+      },
+    );
   };
 
   const createForm = useForm({
@@ -378,6 +395,38 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
                   <AlertDescription>{Object.values(editForm.errors)[0]}</AlertDescription>
                 </Alert>
               )}
+
+              {/* Role management */}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-slate-500">Papel do utilizador</Label>
+                <div className="flex items-center gap-2">
+                  <Select value={newRole} onValueChange={setNewRole}>
+                    <SelectTrigger className="h-8 flex-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 shrink-0"
+                    disabled={changingRole || newRole === editUser.role}
+                    onClick={handleUpdateRole}
+                  >
+                    {changingRole ? 'A guardar…' : 'Guardar papel'}
+                  </Button>
+                </div>
+                {newRole !== editUser.role && (
+                  <p className="text-xs text-amber-600">
+                    A alterar de <strong>{roles.find((r) => r.value === editUser.role)?.label}</strong> para <strong>{roles.find((r) => r.value === newRole)?.label}</strong>
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-1">
                 <Label>Nome *</Label>
                 <Input value={editForm.data.name} onChange={(e) => editForm.setData('name', e.target.value)} required />

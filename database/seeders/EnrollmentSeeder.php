@@ -8,15 +8,18 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 
 /**
- * Enrollment history for the single annual class.
+ * 2026 enrollments only — four cohorts enrolled on different dates.
  *
- * Cohort growth across years:
- *   2024 — 18 founding members
- *   2025 — 21 (18 continued + 3 new: Diogo, Mariana, Tiago)
- *   2026 — 25 (21 continued + 4 new: Catarina, Rodrigo, Inês, André)
+ * Cohort A (10): enrolled 2026-01-04 → 13 sessions eligible
+ * Cohort B  (8): enrolled 2026-02-01 →  9 sessions eligible (Feb 1 onwards)
+ * Cohort C  (4): enrolled 2026-03-08 →  4 sessions eligible (Mar 8 onwards)
+ * Cohort D  (3): enrolled 2026-03-22 →  2 sessions eligible (Mar 22 onwards)
  *
- * One mid-year transfer in 2025: Carlos left in September (transferred_at),
- * demonstrating the transfer trail on the student detail page.
+ * Expected results proving the fix:
+ *   André   (D) 2/2 = 100 %   ← would show 2/13 = 15 % without the fix
+ *   Inês    (D) 1/2 =  50 %   ← would show 1/13 =  8 % without the fix
+ *   Rodrigo (D) 0/2 =   0 %   ← total would wrongly show 13 without the fix
+ *   Mariana (C) 4/4 = 100 %   ← would show 4/13 = 31 % without the fix
  */
 class EnrollmentSeeder extends Seeder
 {
@@ -29,59 +32,37 @@ class EnrollmentSeeder extends Seeder
             return;
         }
 
-        $enroll = function (string $phone, int $year, string $enrolledAt, ?string $transferredAt = null) use ($classroom) {
+        $enroll = function (string $phone, string $enrolledAt) use ($classroom) {
             $student = User::where('phone', $phone)->first();
             if (!$student) return;
             Enrollment::updateOrCreate(
-                ['student_id' => $student->id, 'classroom_id' => $classroom->id, 'academic_year' => $year],
-                ['enrolled_at' => $enrolledAt, 'transferred_at' => $transferredAt]
+                ['student_id' => $student->id, 'classroom_id' => $classroom->id, 'academic_year' => 2026],
+                ['enrolled_at' => $enrolledAt, 'transferred_at' => null]
             );
         };
 
-        // ── 2024 — 18 founding members ────────────────────────
-        $cohort2024 = [
-            '911000001','911000002','911000003','911000004',
-            '911000005','911000006','911000007','911000008', // homens
-            '911000009','911000010','911000011','911000012',
-            '911000013','911000014','911000015','911000016', // senhoras (8 of 10)
-        ];
-        // + 2 jovens who were there from the start
-        $cohort2024 = array_merge($cohort2024, ['911000017', '911000018']);
-
-        foreach ($cohort2024 as $phone) {
-            $enroll($phone, 2024, '2024-01-14');
+        // Cohort A — 10 founding members, enrolled at the first 2026 session
+        foreach (['911000001','911000002','911000003','911000004','911000005',
+                  '911000006','911000007','911000008','911000009','911000010'] as $phone) {
+            $enroll($phone, '2026-01-04');
         }
 
-        // ── 2025 — same 18 + 3 new (phones 019, 020, 021) ───
-        // Carlos Mendes left mid-year (transferred out in September)
-        $continuing2025 = array_diff($cohort2024, ['911000001']); // everyone except Carlos
-        foreach ($continuing2025 as $phone) {
-            $enroll($phone, 2025, '2025-01-12');
-        }
-        // Carlos: enrolled Jan 2025, transferred out Sep 2025
-        $enroll('911000001', 2025, '2025-01-12', '2025-09-14');
-
-        // 3 new members in 2025
-        foreach (['911000019', '911000020', '911000021'] as $phone) {
-            $enroll($phone, 2025, '2025-03-02'); // joined mid-year (after Easter)
+        // Cohort B — 8 students who joined in February
+        foreach (['911000011','911000012','911000013','911000014',
+                  '911000015','911000016','911000017','911000018'] as $phone) {
+            $enroll($phone, '2026-02-01');
         }
 
-        // ── 2026 — 21 continued + 4 new (phones 022–025) ────
-        // Carlos returned in 2026 (new enrollment record, no transferred_at)
-        $returning2026 = array_diff($continuing2025, []); // everyone who didn't leave
-        $returning2026 = array_merge(array_values($returning2026), ['911000019','911000020','911000021']);
-        // Add Carlos back
-        $returning2026[] = '911000001';
-
-        foreach ($returning2026 as $phone) {
-            $enroll($phone, 2026, '2026-01-12');
+        // Cohort C — 4 students who joined in March (mid-month)
+        foreach (['911000019','911000020','911000021','911000022'] as $phone) {
+            $enroll($phone, '2026-03-08');
         }
 
-        // 4 new members in 2026
-        foreach (['911000022','911000023','911000024','911000025'] as $phone) {
-            $enroll($phone, 2026, '2026-01-12');
+        // Cohort D — 3 very recent students, enrolled 2026-03-22
+        foreach (['911000023','911000024','911000025'] as $phone) {
+            $enroll($phone, '2026-03-22');
         }
 
-        $this->command->info('Enrollment history seeded (2024, 2025, 2026).');
+        $this->command->info('Enrollment history seeded (2026 only — 4 cohorts).');
     }
 }

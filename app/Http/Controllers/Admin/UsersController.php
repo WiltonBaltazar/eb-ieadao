@@ -107,6 +107,10 @@ class UsersController extends Controller
             ->whereYear('session_date', $selectedYear)
             ->with('teacher');
 
+        if ($enrollmentForYear?->enrolled_at) {
+            $query->where('session_date', '>=', $enrollmentForYear->enrolled_at->toDateString());
+        }
+
         // Count totals before pagination
         $allSessionIds = (clone $query)->pluck('id');
         $attendanceMap = Attendance::where('student_id', $user->id)
@@ -243,6 +247,18 @@ class UsersController extends Controller
     {
         $user->delete();
         return back()->with('success', 'Utilizador eliminado.');
+    }
+
+    public function updateRole(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'role' => 'required|in:admin,teacher,student',
+        ]);
+
+        $user->update(['role' => $request->role]);
+        $label = Role::from($request->role)->label();
+
+        return back()->with('success', "Papel de {$user->name} alterado para {$label}.");
     }
 
     public function bulkDestroy(Request $request): RedirectResponse

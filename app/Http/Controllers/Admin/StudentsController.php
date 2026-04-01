@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\GrupoHomogeneo;
+use App\Exceptions\AttendanceException;
 use App\Http\Controllers\Controller;
 use App\Models\Classroom;
 use App\Models\Enrollment;
 use App\Models\Setting;
+use App\Models\StudySession;
 use App\Models\User;
+use App\Services\AttendanceService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +66,114 @@ class StudentsController extends Controller
             'gruposOptions' => collect(GrupoHomogeneo::cases())->map(fn ($g) => ['value' => $g->value, 'label' => $g->label()]),
             'filters'       => $request->only(['search', 'classroom_id', 'grupo_homogeneo', 'sort_by', 'sort_dir', 'per_page']),
         ]);
+    }
+
+    public function bulkImport(Request $request): JsonResponse
+    {
+        $grupoValues = implode(',', array_column(GrupoHomogeneo::cases(), 'value'));
+
+        $request->validate([
+            'rows'                       => 'required|array|min:1|max:500',
+            'rows.*.nome'                => 'required|string|max:255',
+            'rows.*.telefone'            => 'required|string|max:50',
+            'rows.*.grupo_homogeneo'     => "required|in:{$grupoValues}",
+            'rows.*.data_inscricao'      => 'required|date_format:Y-m-d',
+            'classroom_id'               => 'nullable|exists:classrooms,id',
+        ], [
+            'rows.*.nome.required'            => 'Nome obrigatório.',
+            'rows.*.telefone.required'        => 'Telefone obrigatório.',
+            'rows.*.grupo_homogeneo.in'       => 'Grupo inválido (use: homens, senhoras, jovens, criancas).',
+            'rows.*.data_inscricao.date_format' => 'Data deve estar no formato YYYY-MM-DD.',
+        ]);
+
+        $year        = Setting::currentAcademicYear();
+        $classroomId = $request->classroom_id ?: null;
+        $enrolledBy  = $request->user()?->id;
+
+        $created = 0;
+        $updated = 0;
+        $rowErrors = [];
+
+        foreach ($request->rows as $i => $row) {
+            try {
+                DB::transaction(function () use ($row, $classroomId, $year, $enrolledBy, &$created, &$updated) {
+                    $existing = User::where('phone', $row['telefone'])->first();
+
+                    if ($existing) {
+                        $existing->update([
+                            'name'            => $row['nome'],
+                            'grupo_homogeneo' => $row['grupo_homogeneo'],
+                            'classroom_id'    => $classroomId ?? $existing->classroom_id,
+                        ]);
+                        $user = $existing;
+                        $updated++;
+                    } else {
+                        $user = User::create([
+                            'name'            => $row['nome'],
+                            'phone'           => $row['telefone'],
+                            'whatsapp'        => $row['telefone'],
+                            'grupo_homogeneo' => $row['grupo_homogeneo'],
+                            'classroom_id'    => $classroomId,
+                            'role'            => 'student',
+                            'password'        => null,
+                        ]);
+                        $created++;
+                    }
+
+                    if ($classroomId) {
+                        Enrollment::updateOrCreate(
+                            [
+                                'student_id'    => $user->id,
+                                'classroom_id'  => $classroomId,
+                                'academic_year' => $year,
+                            ],
+                            [
+                                'enrolled_at'    => $row['data_inscricao'],
+                                'enrolled_by_id' => $enrolledBy,
+                                'transferred_at' => null,
+                            ]
+                        );
+                    }
+                });
+            } catch (\Exception $e) {
+                $rowErrors[] = 'Linha ' . ($i + 2) . " ({$row['nome']}): " . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'created' => $created,
+            'updated' => $updated,
+            'errors'  => $rowErrors,
+        ]);
+    }
+
+    public function markSessions(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'session_ids'   => 'required|array|min:1',
+            'session_ids.*' => 'integer',
+        ]);
+
+        $service = app(AttendanceService::class);
+        $admin   = $request->user();
+        $count   = 0;
+
+        foreach ($request->session_ids as $sessionId) {
+            $session = StudySession::find($sessionId);
+
+            if (!$session || $session->classroom_id !== $user->classroom_id) {
+                continue;
+            }
+
+            try {
+                $service->markPresent($session, $user, $admin);
+                $count++;
+            } catch (AttendanceException) {
+                // duplicate — skip silently
+            }
+        }
+
+        return back()->with('success', "{$count} presença(s) marcada(s) para {$user->name}.");
     }
 
     public function transfer(Request $request, User $user): RedirectResponse

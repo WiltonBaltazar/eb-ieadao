@@ -125,10 +125,21 @@ class User extends Authenticatable
 
         $year ??= Setting::currentAcademicYear();
 
-        $sessionIds = StudySession::where('classroom_id', $this->classroom_id)
+        $sessionQuery = StudySession::where('classroom_id', $this->classroom_id)
             ->whereIn('status', ['open', 'closed'])
-            ->whereYear('session_date', $year)
-            ->pluck('id');
+            ->whereYear('session_date', $year);
+
+        $enrollment = $this->enrollments()
+            ->where('classroom_id', $this->classroom_id)
+            ->forYear($year)
+            ->active()
+            ->first();
+
+        if ($enrollment?->enrolled_at) {
+            $sessionQuery->where('session_date', '>=', $enrollment->enrolled_at->toDateString());
+        }
+
+        $sessionIds = $sessionQuery->pluck('id');
 
         $total    = $sessionIds->count();
         $attended = $this->attendances()->whereIn('study_session_id', $sessionIds)->count();

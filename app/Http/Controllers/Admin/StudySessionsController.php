@@ -293,6 +293,30 @@ class StudySessionsController extends Controller
         return redirect("/admin/sessoes/{$sessionId}/presencas")->with('success', 'Presença removida.');
     }
 
+    public function bulkMarkPresent(Request $request, StudySession $studySession): RedirectResponse
+    {
+        $request->validate([
+            'student_ids'   => 'required|array|min:1',
+            'student_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $markedBy = auth()->user();
+        $count    = 0;
+
+        foreach ($request->student_ids as $studentId) {
+            $student = User::find($studentId);
+            if (!$student) continue;
+            try {
+                $this->attendanceService->markPresent($studySession, $student, $markedBy);
+                $count++;
+            } catch (AttendanceException) {
+                // Already present — skip silently
+            }
+        }
+
+        return back()->with('success', "{$count} presença(s) marcada(s) com sucesso.");
+    }
+
     public function registerAndMark(Request $request, StudySession $studySession): RedirectResponse
     {
         $validated = $request->validate([
