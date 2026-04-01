@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Badge } from '@/Components/ui/badge';
@@ -98,6 +99,35 @@ export default function AlunoDetalhe({
 }: Props) {
   const basePath = `/admin/utilizadores/${student.id}`;
   const { handleSort, handlePerPage } = useTableNav(basePath, filters);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  const presentSessions = sessions.data.filter(s => s.attended);
+  const absentSessions  = sessions.data.filter(s => !s.attended);
+  const allAbsentSelected = absentSessions.length > 0 && absentSessions.every(s => selectedIds.has(s.id));
+
+  const toggleSession = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllAbsent = () => {
+    if (allAbsentSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(absentSessions.map(s => s.id)));
+    }
+  };
+
+  const handleBulkMarkPresent = () => {
+    router.post(
+      `/admin/utilizadores/${student.id}/marcar-sessoes`,
+      { session_ids: Array.from(selectedIds) },
+      { onSuccess: () => setSelectedIds(new Set()) }
+    );
+  };
   const breadcrumbs = [
     { label: 'Dashboard', href: '/admin' },
     { label: 'Utilizadores', href: '/admin/utilizadores' },
@@ -244,8 +274,13 @@ export default function AlunoDetalhe({
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Histórico de Aulas — {selectedYear}</CardTitle>
+            {selectedIds.size > 0 && (
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleBulkMarkPresent}>
+                Marcar {selectedIds.size} presença{selectedIds.size !== 1 ? 's' : ''}
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="p-0">
             {sessions.data.length === 0 ? (
@@ -258,6 +293,16 @@ export default function AlunoDetalhe({
                   <table className="w-full text-sm admin-table">
                     <thead>
                       <tr className="border-b bg-slate-50 text-left text-slate-500">
+                        <th className="px-4 py-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={allAbsentSelected}
+                            onChange={toggleAllAbsent}
+                            disabled={absentSessions.length === 0}
+                            aria-label="Selecionar todos os ausentes"
+                            className="h-4 w-4 rounded border-slate-300 accent-green-600"
+                          />
+                        </th>
                         <SortableTh label="Aula" column="title" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />
                         <SortableTh label="Data" column="session_date" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6" />
                         <th className="px-6 py-3 font-medium">Professor</th>
@@ -267,8 +312,9 @@ export default function AlunoDetalhe({
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {sessions.data.map((session) => (
+                      {presentSessions.map((session) => (
                         <tr key={session.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-4" />
                           <td className="px-6 py-4 font-medium">{session.title}</td>
                           <td className="px-6 py-4 text-slate-600">
                             <span className="flex items-center gap-1.5">
@@ -278,15 +324,9 @@ export default function AlunoDetalhe({
                           </td>
                           <td className="px-6 py-4 text-slate-600">{session.teacher_name ?? '—'}</td>
                           <td className="px-6 py-4">
-                            {session.attended ? (
-                              <Badge className="bg-green-100 text-green-700 flex w-fit items-center gap-1">
-                                <CheckCircle2 className="h-3.5 w-3.5" />Presente
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-red-100 text-red-700 flex w-fit items-center gap-1">
-                                <X className="h-3.5 w-3.5" />Ausente
-                              </Badge>
-                            )}
+                            <Badge className="bg-green-100 text-green-700 flex w-fit items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5" />Presente
+                            </Badge>
                           </td>
                           <td className="px-6 py-4">
                             {session.method && session.method_label ? (
@@ -304,12 +344,51 @@ export default function AlunoDetalhe({
                           <td className="px-6 py-4 text-slate-600">{session.checked_in_at ?? '—'}</td>
                         </tr>
                       ))}
+                      {absentSessions.length > 0 && (
+                        <tr className="bg-slate-50">
+                          <td colSpan={7} className="px-6 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                            Não presentes — {absentSessions.length}
+                          </td>
+                        </tr>
+                      )}
+                      {absentSessions.map((session) => (
+                        <tr
+                          key={session.id}
+                          className="hover:bg-green-50 cursor-pointer"
+                          onClick={() => toggleSession(session.id)}
+                        >
+                          <td className="px-4 py-4" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(session.id)}
+                              onChange={() => toggleSession(session.id)}
+                              aria-label={`Selecionar ${session.title}`}
+                              className="h-4 w-4 rounded border-slate-300 accent-green-600"
+                            />
+                          </td>
+                          <td className="px-6 py-4 font-medium">{session.title}</td>
+                          <td className="px-6 py-4 text-slate-600">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                              {session.session_date}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">{session.teacher_name ?? '—'}</td>
+                          <td className="px-6 py-4">
+                            <Badge className="bg-red-100 text-red-700 flex w-fit items-center gap-1">
+                              <X className="h-3.5 w-3.5" />Ausente
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4"><span className="text-slate-400">—</span></td>
+                          <td className="px-6 py-4 text-slate-600">—</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
 
                 <div className="divide-y md:hidden">
-                  {sessions.data.map((session) => (
+                  {presentSessions.map((session) => (
                     <div key={session.id} className="flex items-start justify-between px-4 py-4">
                       <div className="space-y-0.5">
                         <p className="font-medium">{session.title}</p>
@@ -317,17 +396,39 @@ export default function AlunoDetalhe({
                           <Calendar className="h-3 w-3" />{session.session_date}
                         </p>
                       </div>
-                      <div>
-                        {session.attended ? (
-                          <Badge className="bg-green-100 text-green-700 flex items-center gap-1">
-                            <CheckCircle2 className="h-3.5 w-3.5" />Presente
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-red-100 text-red-700 flex items-center gap-1">
-                            <X className="h-3.5 w-3.5" />Ausente
-                          </Badge>
-                        )}
+                      <Badge className="bg-green-100 text-green-700 flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" />Presente
+                      </Badge>
+                    </div>
+                  ))}
+                  {absentSessions.length > 0 && (
+                    <div className="px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      Não presentes — {absentSessions.length}
+                    </div>
+                  )}
+                  {absentSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className="flex items-start gap-3 px-4 py-4 cursor-pointer hover:bg-green-50"
+                      onClick={() => toggleSession(session.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(session.id)}
+                        onChange={() => toggleSession(session.id)}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300 accent-green-600"
+                        aria-label={`Selecionar ${session.title}`}
+                      />
+                      <div className="flex-1 space-y-0.5">
+                        <p className="font-medium">{session.title}</p>
+                        <p className="text-xs text-slate-500 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />{session.session_date}
+                        </p>
                       </div>
+                      <Badge className="bg-red-100 text-red-700 flex items-center gap-1">
+                        <X className="h-3.5 w-3.5" />Ausente
+                      </Badge>
                     </div>
                   ))}
                 </div>

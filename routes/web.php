@@ -61,7 +61,9 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
 
     // Students
     Route::get('/alunos', [StudentsController::class, 'index'])->name('admin.students.index');
+    Route::post('/alunos/bulk-import', [StudentsController::class, 'bulkImport'])->name('admin.students.bulk-import');
     Route::put('/alunos/{user}/transfer', [StudentsController::class, 'transfer'])->name('admin.students.transfer');
+    Route::post('/utilizadores/{user}/marcar-sessoes', [StudentsController::class, 'markSessions'])->name('admin.students.mark-sessions');
 
     // Users
     Route::get('/utilizadores', [UsersController::class, 'index'])->name('admin.users.index');
@@ -69,6 +71,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::post('/utilizadores/bulk-destroy', [UsersController::class, 'bulkDestroy'])->name('admin.users.bulk-destroy');
     Route::get('/utilizadores/{user}', [UsersController::class, 'show'])->name('admin.users.show');
     Route::put('/utilizadores/{user}', [UsersController::class, 'update'])->name('admin.users.update');
+    Route::patch('/utilizadores/{user}/papel', [UsersController::class, 'updateRole'])->name('admin.users.update-role');
     Route::delete('/utilizadores/{user}', [UsersController::class, 'destroy'])->name('admin.users.destroy');
 
     // Classrooms
@@ -89,6 +92,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::post('/sessoes/{studySession}/fechar', [StudySessionsController::class, 'close'])->name('admin.sessions.close');
     Route::post('/sessoes/{studySession}/regenerar-codigo', [StudySessionsController::class, 'regenerateCode'])->name('admin.sessions.regenerate');
     Route::post('/sessoes/{studySession}/marcar-presente', [StudySessionsController::class, 'markPresent'])->name('admin.sessions.mark-present');
+    Route::post('/sessoes/{studySession}/bulk-marcar-presente', [StudySessionsController::class, 'bulkMarkPresent'])->name('admin.sessions.bulk-mark-present');
     Route::get('/sessoes/{studySession}/presencas', [StudySessionsController::class, 'attendance'])->name('admin.sessions.attendance');
     Route::get('/sessoes/{studySession}/exportar-excel', [StudySessionsController::class, 'exportExcel'])->name('admin.sessions.export-excel');
     Route::post('/sessoes/{studySession}/registar-e-marcar', [StudySessionsController::class, 'registerAndMark'])->name('admin.sessions.register-and-mark');
