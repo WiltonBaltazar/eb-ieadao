@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Attendance;
 use App\Models\Classroom;
+use App\Models\Enrollment;
 use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
@@ -11,6 +12,20 @@ use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * 2026-only seed — designed to prove enrollment-date attendance scoping.
+ *
+ * Four cohorts enrolled at different points in 2026:
+ *   A — 10 students enrolled 2026-01-04  → eligible for all 13 sessions
+ *   B —  8 students enrolled 2026-02-01  → eligible for sessions  5-13 (9 sessions)
+ *   C —  4 students enrolled 2026-03-08  → eligible for sessions 10-13 (4 sessions)
+ *   D —  3 students enrolled 2026-03-22  → eligible for sessions 12-13 (2 sessions)
+ *
+ * Group D attendance is explicit so the fix is obvious at a glance:
+ *   André   attended both  → 2/2 = 100 %   (without fix: 2/13 = 15 %)
+ *   Inês    attended one   → 1/2 =  50 %   (without fix: 1/13 =  8 %)
+ *   Rodrigo attended none  → 0/2 =   0 %   (without fix: 0/13 =  0 %, but total shows 13 falsely)
+ */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
@@ -31,22 +46,12 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $teacherData = [
-            ['name' => 'Diác. Mário Santos',  'email' => 'mario@ieadao.pt'],
-            ['name' => 'Irmã Conceição Neves', 'email' => 'conceicao@ieadao.pt'],
-        ];
-        $teachers = [];
-        foreach ($teacherData as $td) {
-            $teachers[] = User::updateOrCreate(
-                ['email' => $td['email']],
-                ['name' => $td['name'], 'password' => Hash::make('password'), 'role' => 'teacher']
-            );
-        }
+        $teacher = User::updateOrCreate(
+            ['email' => 'mario@ieadao.pt'],
+            ['name' => 'Diác. Mário Santos', 'password' => Hash::make('password'), 'role' => 'teacher']
+        );
 
-        // ── One classroom for everyone ────────────────────────
-        // No gender/age separation — all members attend together.
-        // The same classroom persists year over year; annual enrollments
-        // track which students were active each year.
+        // ── Classroom ─────────────────────────────────────────
         $classroom = Classroom::updateOrCreate(
             ['name' => 'Escola Bíblica Dominical'],
             [
@@ -56,43 +61,44 @@ class DatabaseSeeder extends Seeder
                 'is_active'    => true,
             ]
         );
-        $classroom->teachers()->sync([$teachers[0]->id]);
+        $classroom->teachers()->sync([$teacher->id]);
 
-        // ── Students (25) — mixed grupos, all in the same classroom ──
+        // ── Students — four cohorts ───────────────────────────
         $studentsData = [
-            // Homens (8)
-            ['name' => 'Carlos Mendes',      'phone' => '911000001', 'grupo' => 'homens'],
-            ['name' => 'António Sousa',       'phone' => '911000002', 'grupo' => 'homens'],
-            ['name' => 'Manuel Figueiredo',   'phone' => '911000003', 'grupo' => 'homens'],
-            ['name' => 'Paulo Gomes',         'phone' => '911000004', 'grupo' => 'homens'],
-            ['name' => 'Rui Cardoso',         'phone' => '911000005', 'grupo' => 'homens'],
-            ['name' => 'Jorge Lopes',         'phone' => '911000006', 'grupo' => 'homens'],
-            ['name' => 'Fernando Pinto',      'phone' => '911000007', 'grupo' => 'homens'],
-            ['name' => 'Eduardo Vieira',      'phone' => '911000008', 'grupo' => 'homens'],
-            // Senhoras (10)
-            ['name' => 'Maria da Conceição',  'phone' => '911000009', 'grupo' => 'senhoras'],
-            ['name' => 'Rosa Ferreira',        'phone' => '911000010', 'grupo' => 'senhoras'],
-            ['name' => 'Fátima Ribeiro',       'phone' => '911000011', 'grupo' => 'senhoras'],
-            ['name' => 'Graça Oliveira',       'phone' => '911000012', 'grupo' => 'senhoras'],
-            ['name' => 'Helena Costa',         'phone' => '911000013', 'grupo' => 'senhoras'],
-            ['name' => 'Isabel Marques',       'phone' => '911000014', 'grupo' => 'senhoras'],
-            ['name' => 'Lurdes Baptista',      'phone' => '911000015', 'grupo' => 'senhoras'],
-            ['name' => 'Piedade Santos',       'phone' => '911000016', 'grupo' => 'senhoras'],
-            ['name' => 'Filomena Alves',       'phone' => '911000017', 'grupo' => 'senhoras'],
-            ['name' => 'Alcinda Monteiro',     'phone' => '911000018', 'grupo' => 'senhoras'],
-            // Jovens (7)
-            ['name' => 'Diogo Ferreira',       'phone' => '911000019', 'grupo' => 'jovens'],
-            ['name' => 'Mariana Silva',        'phone' => '911000020', 'grupo' => 'jovens'],
-            ['name' => 'Tiago Almeida',        'phone' => '911000021', 'grupo' => 'jovens'],
-            ['name' => 'Catarina Rocha',       'phone' => '911000022', 'grupo' => 'jovens'],
-            ['name' => 'Rodrigo Moreira',      'phone' => '911000023', 'grupo' => 'jovens'],
-            ['name' => 'Inês Carvalho',        'phone' => '911000024', 'grupo' => 'jovens'],
-            ['name' => 'André Fonseca',        'phone' => '911000025', 'grupo' => 'jovens'],
+            // Cohort A — enrolled 2026-01-04 (founding 2026 members, 10 students)
+            ['phone' => '911000001', 'name' => 'Carlos Mendes',      'grupo' => 'homens'],
+            ['phone' => '911000002', 'name' => 'António Sousa',       'grupo' => 'homens'],
+            ['phone' => '911000003', 'name' => 'Manuel Figueiredo',   'grupo' => 'homens'],
+            ['phone' => '911000004', 'name' => 'Paulo Gomes',         'grupo' => 'homens'],
+            ['phone' => '911000005', 'name' => 'Rui Cardoso',         'grupo' => 'homens'],
+            ['phone' => '911000006', 'name' => 'Maria da Conceição',  'grupo' => 'senhoras'],
+            ['phone' => '911000007', 'name' => 'Rosa Ferreira',       'grupo' => 'senhoras'],
+            ['phone' => '911000008', 'name' => 'Fátima Ribeiro',      'grupo' => 'senhoras'],
+            ['phone' => '911000009', 'name' => 'Graça Oliveira',      'grupo' => 'senhoras'],
+            ['phone' => '911000010', 'name' => 'Helena Costa',        'grupo' => 'senhoras'],
+            // Cohort B — enrolled 2026-02-01 (joined in February, 8 students)
+            ['phone' => '911000011', 'name' => 'Jorge Lopes',         'grupo' => 'homens'],
+            ['phone' => '911000012', 'name' => 'Fernando Pinto',      'grupo' => 'homens'],
+            ['phone' => '911000013', 'name' => 'Eduardo Vieira',      'grupo' => 'homens'],
+            ['phone' => '911000014', 'name' => 'Isabel Marques',      'grupo' => 'senhoras'],
+            ['phone' => '911000015', 'name' => 'Lurdes Baptista',     'grupo' => 'senhoras'],
+            ['phone' => '911000016', 'name' => 'Piedade Santos',      'grupo' => 'senhoras'],
+            ['phone' => '911000017', 'name' => 'Filomena Alves',      'grupo' => 'senhoras'],
+            ['phone' => '911000018', 'name' => 'Alcinda Monteiro',    'grupo' => 'senhoras'],
+            // Cohort C — enrolled 2026-03-08 (joined in March, 4 students)
+            ['phone' => '911000019', 'name' => 'Diogo Ferreira',      'grupo' => 'jovens'],
+            ['phone' => '911000020', 'name' => 'Mariana Silva',       'grupo' => 'jovens'],
+            ['phone' => '911000021', 'name' => 'Tiago Almeida',       'grupo' => 'jovens'],
+            ['phone' => '911000022', 'name' => 'Catarina Rocha',      'grupo' => 'jovens'],
+            // Cohort D — enrolled 2026-03-22 (very recent, 3 students)
+            ['phone' => '911000023', 'name' => 'Rodrigo Moreira',     'grupo' => 'jovens'],
+            ['phone' => '911000024', 'name' => 'Inês Carvalho',       'grupo' => 'jovens'],
+            ['phone' => '911000025', 'name' => 'André Fonseca',       'grupo' => 'jovens'],
         ];
 
         $students = [];
         foreach ($studentsData as $sd) {
-            $students[] = User::updateOrCreate(
+            $students[$sd['phone']] = User::updateOrCreate(
                 ['phone' => $sd['phone']],
                 [
                     'name'            => $sd['name'],
@@ -106,112 +112,129 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // ── Sessions & Attendance ─────────────────────────────
-        // Weekly Sunday sessions across three academic years.
-        // The classroom is the same every year; the year is derived from session_date.
-
-        $methods   = ['manual', 'qr', 'auto'];
-        $teacher   = $teachers[0];
-
-        // Lesson series cycling through biblical topics (24 titles)
-        $titles = [
-            'A Criação e o Propósito de Deus',
-            'O Pecado e a Necessidade de Salvação',
-            'A Graça de Deus — Amor Incondicional',
-            'Fé: O que é e Como Cresce',
-            'A Oração que Transforma',
-            'A Bíblia: Palavra Viva e Eficaz',
-            'Arrependimento e Perdão',
-            'O Batismo: Significado e Chamado',
-            'O Espírito Santo na Vida do Crente',
-            'A Igreja: Corpo de Cristo',
-            'Discipulado: Seguir a Jesus',
-            'Mordomia: Administrando o que Deus Deu',
-            'A Família segundo a Bíblia',
-            'Trabalho e Vocação Cristã',
-            'Sofrimento e a Soberania de Deus',
-            'Esperança e Vida Eterna',
-            'O Grande Mandamento: Amar a Deus e ao Próximo',
-            'A Grande Comissão: Ir e Fazer Discípulos',
-            'Integridade e Carácter Cristão',
-            'Gratidão: Uma Vida de Adoração',
-            'Servir: O Caminho para a Grandeza',
-            'Comunidade e Responsabilidade Mútua',
-            'O Regresso de Cristo',
-            'Viver pela Fé no Dia a Dia',
+        // ── 2026 Sessions (all 13 Sundays Jan–Mar) ───────────
+        // Session 13 (2026-03-29) is open; all others closed.
+        $sessions2026 = [
+            ['date' => '2026-01-04', 'title' => 'Lição 1 — A Criação e o Propósito de Deus',            'status' => 'closed'],
+            ['date' => '2026-01-11', 'title' => 'Lição 2 — O Pecado e a Necessidade de Salvação',        'status' => 'closed'],
+            ['date' => '2026-01-18', 'title' => 'Lição 3 — A Graça de Deus — Amor Incondicional',        'status' => 'closed'],
+            ['date' => '2026-01-25', 'title' => 'Lição 4 — Fé: O que é e Como Cresce',                   'status' => 'closed'],
+            ['date' => '2026-02-01', 'title' => 'Lição 5 — A Oração que Transforma',                     'status' => 'closed'],
+            ['date' => '2026-02-08', 'title' => 'Lição 6 — A Bíblia: Palavra Viva e Eficaz',             'status' => 'closed'],
+            ['date' => '2026-02-15', 'title' => 'Lição 7 — Arrependimento e Perdão',                     'status' => 'closed'],
+            ['date' => '2026-02-22', 'title' => 'Lição 8 — O Batismo: Significado e Chamado',             'status' => 'closed'],
+            ['date' => '2026-03-01', 'title' => 'Lição 9 — O Espírito Santo na Vida do Crente',          'status' => 'closed'],
+            ['date' => '2026-03-08', 'title' => 'Lição 10 — A Igreja: Corpo de Cristo',                   'status' => 'closed'],
+            ['date' => '2026-03-15', 'title' => 'Lição 11 — Discipulado: Seguir a Jesus',                 'status' => 'closed'],
+            ['date' => '2026-03-22', 'title' => 'Lição 12 — Mordomia: Administrando o que Deus Deu',      'status' => 'closed'],
+            ['date' => '2026-03-29', 'title' => 'Lição 13 — A Família segundo a Bíblia',                  'status' => 'open'],
         ];
-        $titlesLen = count($titles);
 
-        // Find last Sunday on or before today
-        $today      = Carbon::today();
-        $lastSunday = $today->isSunday() ? $today->copy() : $today->previous(Carbon::SUNDAY);
-
-        // Build the full list of Sunday dates to seed
-        $sundays = [];
-
-        // 2024: all Sundays (Jan 7 → Dec 29)
-        for ($d = Carbon::create(2024, 1, 7); $d->year === 2024; $d->addWeek()) {
-            $sundays[] = $d->copy();
-        }
-        // 2025: all Sundays (Jan 5 → Dec 28)
-        for ($d = Carbon::create(2025, 1, 5); $d->year === 2025; $d->addWeek()) {
-            $sundays[] = $d->copy();
-        }
-        // 2026: Jan 4 → last Sunday
-        for ($d = Carbon::create(2026, 1, 4); $d->lte($lastSunday); $d->addWeek()) {
-            $sundays[] = $d->copy();
-        }
-
-        $totalSundays = count($sundays);
-
-        foreach ($sundays as $idx => $sunday) {
-            $lessonNum   = $idx + 1;
-            $titleIndex  = $idx % $titlesLen;
-            $isCurrent   = $sunday->equalTo($lastSunday);
-            $status      = $isCurrent ? 'open' : 'closed';
-
-            $session = StudySession::updateOrCreate(
-                ['classroom_id' => $classroom->id, 'session_date' => $sunday->format('Y-m-d')],
+        $sessionModels = [];
+        foreach ($sessions2026 as $s) {
+            $date = Carbon::parse($s['date']);
+            $isOpen = $s['status'] === 'open';
+            $sessionModels[$s['date']] = StudySession::updateOrCreate(
+                ['classroom_id' => $classroom->id, 'session_date' => $s['date']],
                 [
-                    'title'                      => "Lição {$lessonNum} — {$titles[$titleIndex]}",
+                    'title'                      => $s['title'],
                     'teacher_id'                 => $teacher->id,
-                    'status'                     => $status,
+                    'status'                     => $s['status'],
                     'lesson_type'                => 'Bíblica',
-                    'attendance_opened_at'       => $sunday->copy()->setTime(9, 30),
-                    'attendance_closed_at'       => $isCurrent ? null : $sunday->copy()->setTime(11, 30),
-                    'check_in_code'              => $isCurrent ? 'ABCD1234' : null,
-                    'check_in_code_generated_at' => $isCurrent ? now() : null,
-                    'check_in_code_expires_at'   => $isCurrent ? now()->addMinutes(15) : null,
+                    'attendance_opened_at'       => $date->copy()->setTime(9, 30),
+                    'attendance_closed_at'       => $isOpen ? null : $date->copy()->setTime(11, 30),
+                    'check_in_code'              => $isOpen ? 'ABCD1234' : null,
+                    'check_in_code_generated_at' => $isOpen ? now() : null,
+                    'check_in_code_expires_at'   => $isOpen ? now()->addMinutes(15) : null,
                 ]
             );
+        }
 
-            // Which students were enrolled this year?
-            // EnrollmentSeeder defines the per-year cohorts. For attendance we
-            // use the students whose classroom_id is set — they are all in this class.
-            // We'll vary attendance between 60–90 % to create realistic chart data.
-            $attendRate = 0.60 + (sin($idx * 0.4) * 0.15) + (($idx % 7) * 0.01);
-            $attendRate = max(0.45, min(0.92, $attendRate));
+        // Helper to mark attendance
+        $attend = function (string $phone, string $date, string $method = 'manual') use ($students, $sessionModels, $teacher) {
+            $student = $students[$phone] ?? null;
+            $session = $sessionModels[$date] ?? null;
+            if (!$student || !$session) return;
+            Attendance::updateOrCreate(
+                ['study_session_id' => $session->id, 'student_id' => $student->id],
+                [
+                    'check_in_method' => $method,
+                    'marked_by_id'    => $method === 'manual' ? $teacher->id : null,
+                    'checked_in_at'   => Carbon::parse($date)->setTime(9, rand(30, 55), rand(0, 59)),
+                ]
+            );
+        };
 
-            $numAttending = max(1, (int) round(count($students) * $attendRate));
-            $numAttending = min($numAttending, count($students));
+        // ── Cohort A attendance (enrolled 2026-01-04, 13 sessions eligible) ──
+        // ~75–85 % rate across all 13 sessions — realistic, varied per student
+        $cohortA = ['911000001','911000002','911000003','911000004','911000005',
+                    '911000006','911000007','911000008','911000009','911000010'];
+        $allDates = array_column($sessions2026, 'date');
 
-            // Rotate which students are present each week
-            $rotated   = collect($students);
-            $shifted   = $rotated->slice($idx % count($students))->merge($rotated->take($idx % count($students)));
-            $attending = $shifted->take($numAttending);
-
-            foreach ($attending as $student) {
-                $method = $methods[($student->id + $idx) % count($methods)];
-                Attendance::updateOrCreate(
-                    ['study_session_id' => $session->id, 'student_id' => $student->id],
-                    [
-                        'check_in_method' => $method,
-                        'marked_by_id'    => $method === 'manual' ? $teacher->id : null,
-                        'checked_in_at'   => $sunday->copy()->setTime(9, rand(25, 60), rand(0, 59)),
-                    ]
-                );
+        // Each student misses 2-3 sessions spread across the year
+        $missPattern = [
+            '911000001' => ['2026-01-18', '2026-02-22'],
+            '911000002' => ['2026-02-08', '2026-03-15'],
+            '911000003' => ['2026-01-25', '2026-03-01', '2026-03-29'],
+            '911000004' => ['2026-02-01', '2026-03-08'],
+            '911000005' => ['2026-01-11', '2026-02-15', '2026-03-22'],
+            '911000006' => ['2026-02-22', '2026-03-29'],
+            '911000007' => ['2026-01-18', '2026-03-08'],
+            '911000008' => ['2026-01-25', '2026-02-08', '2026-03-22'],
+            '911000009' => ['2026-02-01', '2026-03-15'],
+            '911000010' => ['2026-01-11', '2026-02-15'],
+        ];
+        foreach ($cohortA as $phone) {
+            $missing = $missPattern[$phone] ?? [];
+            foreach ($allDates as $date) {
+                if (!in_array($date, $missing)) {
+                    $attend($phone, $date, ['manual', 'qr', 'auto'][crc32($phone.$date) % 3]);
+                }
             }
         }
+
+        // ── Cohort B attendance (enrolled 2026-02-01, sessions 5-13 eligible) ──
+        // ~78 % rate — they were NOT here for Jan sessions (those don't count)
+        $cohortBDates = ['2026-02-01','2026-02-08','2026-02-15','2026-02-22',
+                         '2026-03-01','2026-03-08','2026-03-15','2026-03-22','2026-03-29'];
+        $cohortBMiss = [
+            '911000011' => ['2026-02-15', '2026-03-22'],
+            '911000012' => ['2026-02-22', '2026-03-08'],
+            '911000013' => ['2026-03-01', '2026-03-29'],
+            '911000014' => ['2026-02-08', '2026-03-15'],
+            '911000015' => ['2026-02-22'],
+            '911000016' => ['2026-03-08', '2026-03-22'],
+            '911000017' => ['2026-02-15'],
+            '911000018' => ['2026-03-01', '2026-03-15'],
+        ];
+        foreach ($cohortBMiss as $phone => $missing) {
+            foreach ($cohortBDates as $date) {
+                if (!in_array($date, $missing)) {
+                    $attend($phone, $date, ['manual', 'qr'][crc32($phone.$date) % 2]);
+                }
+            }
+        }
+
+        // ── Cohort C attendance (enrolled 2026-03-08, sessions 10-13 eligible) ──
+        // Explicit so it's easy to verify: 4 sessions eligible each
+        $cohortCDates = ['2026-03-08','2026-03-15','2026-03-22','2026-03-29'];
+        //  Diogo   3/4 = 75 %  — misses last
+        foreach (['2026-03-08','2026-03-15','2026-03-22'] as $d) { $attend('911000019', $d, 'qr'); }
+        //  Mariana 4/4 = 100 %
+        foreach ($cohortCDates as $d) { $attend('911000020', $d, 'qr'); }
+        //  Tiago   2/4 = 50 %  — misses sessions 11 & 12
+        foreach (['2026-03-08','2026-03-29'] as $d) { $attend('911000021', $d, 'manual'); }
+        //  Catarina 3/4 = 75 % — misses session 10
+        foreach (['2026-03-15','2026-03-22','2026-03-29'] as $d) { $attend('911000022', $d, 'qr'); }
+
+        // ── Cohort D attendance (enrolled 2026-03-22, sessions 12-13 eligible) ──
+        // The most obvious proof: only 2 sessions should count, not 13
+        //  Rodrigo  0/2 =   0 %  — attended nothing yet
+        //  Inês     1/2 =  50 %  — attended session 12 only
+        $attend('911000024', '2026-03-22', 'manual');
+        //  André    2/2 = 100 %  — attended both sessions
+        $attend('911000025', '2026-03-22', 'manual');
+        $attend('911000025', '2026-03-29', 'qr');
 
         $this->call([EnrollmentSeeder::class]);
     }

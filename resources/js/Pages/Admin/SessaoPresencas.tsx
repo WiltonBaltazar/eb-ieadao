@@ -34,6 +34,8 @@ import {
   Link2,
   Upload,
   Plus,
+  Loader2,
+  ClipboardCheck,
 } from 'lucide-react';
 import { LessonResource, PageProps, PaginatedData } from '@/types';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
@@ -57,6 +59,7 @@ interface NotAttendedRow {
   name: string;
   phone: string | null;
   role: 'student' | 'teacher';
+  grupo_homogeneo: string | null;
 }
 
 interface Props extends PageProps {
@@ -190,6 +193,50 @@ export default function SessaoPresencas({
         preserveScroll: true,
       });
     }
+  };
+
+  // ── Bulk mark presence ──────────────────────────────────────
+  const [bulkSearch, setBulkSearch]       = useState('');
+  const [markSelected, setMarkSelected]   = useState<Set<number>>(new Set());
+  const [bulkMarking, setBulkMarking]     = useState(false);
+
+  const filteredNotAttended = useMemo(() => {
+    if (!bulkSearch.trim()) return notAttended;
+    const q = bulkSearch.toLowerCase();
+    return notAttended.filter(
+      (s) => s.name.toLowerCase().includes(q) || (s.phone ?? '').includes(q),
+    );
+  }, [notAttended, bulkSearch]);
+
+  const markIds            = Array.from(markSelected);
+  const markCount          = markSelected.size;
+  const isAllMark          = filteredNotAttended.length > 0 && filteredNotAttended.every((s) => markSelected.has(s.id));
+  const isIndeterminateMark = markCount > 0 && !isAllMark;
+  const isMarked           = (id: number) => markSelected.has(id);
+
+  const toggleMark = (id: number) =>
+    setMarkSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const toggleAllMark = () =>
+    setMarkSelected(
+      isAllMark ? new Set() : new Set(filteredNotAttended.map((s) => s.id)),
+    );
+
+  const handleBulkMarkPresent = () => {
+    if (markIds.length === 0) return;
+    setBulkMarking(true);
+    router.post(
+      `/admin/sessoes/${studySession.id}/bulk-marcar-presente`,
+      { student_ids: markIds },
+      {
+        onSuccess: () => { setMarkSelected(new Set()); setBulkMarking(false); },
+        onError:   () => setBulkMarking(false),
+      },
+    );
   };
 
   // ── Resources ──
@@ -733,13 +780,27 @@ export default function SessaoPresencas({
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4 text-slate-500" />
-                Presenças Confirmadas
-                <Badge className="bg-slate-100 text-slate-700 font-semibold ml-1">
-                  {attended.total}
-                </Badge>
-              </CardTitle>
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4 text-slate-500" />
+                  Presenças
+                  <Badge className="bg-slate-100 text-slate-700 font-semibold ml-1">
+                    {attended.total}
+                  </Badge>
+                </CardTitle>
+                {markCount > 0 && (
+                  <Button
+                    size="sm"
+                    className="h-7 gap-1 bg-green-600 hover:bg-green-700 text-white text-xs"
+                    disabled={bulkMarking}
+                    onClick={handleBulkMarkPresent}
+                  >
+                    {bulkMarking
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />A marcar…</>
+                      : <><CheckCircle2 className="h-3.5 w-3.5" />Marcar {markCount} presença{markCount !== 1 ? 's' : ''}</>}
+                  </Button>
+                )}
+              </div>
 
               {/* Filters */}
               <div className="flex gap-2 flex-wrap">
@@ -799,128 +860,68 @@ export default function SessaoPresencas({
               onClear={clearSelection}
               onSelectAll={toggleAll}
             />
-            {attended.data.length === 0 ? (
-              <div className="py-12 text-center text-slate-400">
-                <Users className="h-10 w-10 mx-auto mb-3 opacity-25" />
-                <p className="font-medium">
-                  {hasFilters ? 'Nenhum resultado para este filtro' : 'Ainda não há presenças registadas'}
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Desktop */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm admin-table">
-                    <thead className="border-b border-slate-100 bg-slate-50/50">
-                      <tr>
-                        <th className="w-10 px-4 py-2.5">
-                          <input
-                            type="checkbox"
-                            checked={isAllSelected}
-                            ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
-                            onChange={toggleAll}
-                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
-                          />
-                        </th>
-                        <SortableTh label="Aluno" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6 py-2.5" />
-                        <SortableTh label="Telefone" column="phone" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
-                        <th className="text-left px-4 py-2.5 font-medium text-slate-500">Grupo</th>
-                        <SortableTh label="Método" column="check_in_method" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
-                        <SortableTh label="Hora" column="checked_in_at" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
-                        <th className="text-left px-4 py-2.5 font-medium text-slate-500">Por</th>
-                        <th className="px-4 py-2.5"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {attended.data.map((a) => (
-                        <tr key={a.id} className={isSelected(a.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50/60'}>
-                          <td className="w-10 px-4 py-2.5">
-                            <input
-                              type="checkbox"
-                              checked={isSelected(a.id)}
-                              onChange={() => toggleOne(a.id)}
-                              className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
-                            />
-                          </td>
-                          <td className="px-6 py-2.5 font-medium text-slate-800">
-                            {a.name}
-                            {a.role === 'teacher' && (
-                              <Badge className="bg-blue-100 text-blue-800 text-xs ml-2">Professor</Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5 text-slate-500 text-xs">{a.phone ?? '—'}</td>
-                          <td className="px-4 py-2.5">
-                            {a.grupo_homogeneo ? (
-                              <Badge className={`text-xs ${grupoColors[a.grupo_homogeneo] ?? ''}`}>
-                                {a.grupo_homogeneo_label}
-                              </Badge>
-                            ) : (
-                              <span className="text-slate-300 text-xs">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <Badge
-                              variant="outline"
-                              className={
-                                a.method === 'qr'
-                                  ? 'border-purple-300 text-purple-700 text-xs'
-                                  : a.method === 'auto'
-                                  ? 'border-green-300 text-green-700 text-xs'
-                                  : 'border-slate-300 text-slate-600 text-xs'
-                              }
-                            >
-                              {a.method === 'qr' ? (
-                                <QrCode className="h-3 w-3 mr-1 inline" />
-                              ) : a.method === 'auto' ? (
-                                <Zap className="h-3 w-3 mr-1 inline" />
-                              ) : (
-                                <Hand className="h-3 w-3 mr-1 inline" />
-                              )}
-                              {a.method_label}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-2.5 text-slate-500 text-xs tabular-nums">
-                            {a.checked_in_at}
-                          </td>
-                          <td className="px-4 py-2.5 text-slate-400 text-xs">
-                            {a.marked_by ?? '—'}
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 gap-1 text-xs text-red-500 opacity-60 hover:opacity-100"
-                              onClick={() => handleRemove(a.id, a.name)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />Remover
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile */}
-                <div className="md:hidden divide-y divide-slate-100">
-                  {attended.data.map((a) => (
-                    <div key={a.id} className={`px-4 py-3 flex items-center gap-3 ${isSelected(a.id) ? 'bg-blue-50/40' : ''}`}>
+            {/* Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm admin-table">
+                <thead className="border-b border-slate-100 bg-slate-50/50">
+                  <tr>
+                    <th className="w-10 px-4 py-2.5">
                       <input
                         type="checkbox"
-                        checked={isSelected(a.id)}
-                        onChange={() => toggleOne(a.id)}
-                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer shrink-0"
+                        checked={isAllSelected}
+                        ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
+                        onChange={toggleAll}
+                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
                       />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-slate-800 truncate">
-                          {a.name}
-                          {a.role === 'teacher' && (
-                            <Badge className="bg-blue-100 text-blue-800 text-xs ml-2">Professor</Badge>
-                          )}
+                    </th>
+                    <SortableTh label="Aluno" column="name" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="px-6 py-2.5" />
+                    <SortableTh label="Telefone" column="phone" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
+                    <th className="text-left px-4 py-2.5 font-medium text-slate-500">Grupo</th>
+                    <SortableTh label="Método" column="check_in_method" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
+                    <SortableTh label="Hora" column="checked_in_at" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
+                    <th className="text-left px-4 py-2.5 font-medium text-slate-500">Por</th>
+                    <th className="px-4 py-2.5"></th>
+                  </tr>
+                </thead>
+
+                {/* Attended rows */}
+                <tbody className="divide-y divide-slate-50">
+                  {attended.data.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-10 text-center text-slate-400">
+                        <Users className="h-8 w-8 mx-auto mb-2 opacity-25" />
+                        <p className="text-sm font-medium">
+                          {hasFilters ? 'Nenhum resultado para este filtro' : 'Ainda não há presenças registadas'}
                         </p>
-                        <p className="text-xs text-slate-400">{a.phone}</p>
-                      </div>
-                      <div className="shrink-0 flex flex-col items-end gap-1">
+                      </td>
+                    </tr>
+                  ) : attended.data.map((a) => (
+                    <tr key={a.id} className={isSelected(a.id) ? 'bg-blue-50/40' : 'hover:bg-slate-50/60'}>
+                      <td className="w-10 px-4 py-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isSelected(a.id)}
+                          onChange={() => toggleOne(a.id)}
+                          className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-2.5 font-medium text-slate-800">
+                        {a.name}
+                        {a.role === 'teacher' && (
+                          <Badge className="bg-blue-100 text-blue-800 text-xs ml-2">Professor</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-500 text-xs">{a.phone ?? '—'}</td>
+                      <td className="px-4 py-2.5">
+                        {a.grupo_homogeneo ? (
+                          <Badge className={`text-xs ${grupoColors[a.grupo_homogeneo] ?? ''}`}>
+                            {a.grupo_homogeneo_label}
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5">
                         <Badge
                           variant="outline"
                           className={
@@ -931,22 +932,203 @@ export default function SessaoPresencas({
                               : 'border-slate-300 text-slate-600 text-xs'
                           }
                         >
+                          {a.method === 'qr' ? (
+                            <QrCode className="h-3 w-3 mr-1 inline" />
+                          ) : a.method === 'auto' ? (
+                            <Zap className="h-3 w-3 mr-1 inline" />
+                          ) : (
+                            <Hand className="h-3 w-3 mr-1 inline" />
+                          )}
                           {a.method_label}
                         </Badge>
-                        <span className="text-xs text-slate-400">{a.checked_in_at}</span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 gap-1 text-xs text-red-500 opacity-60 hover:opacity-100 shrink-0"
-                        onClick={() => handleRemove(a.id, a.name)}
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-500 text-xs tabular-nums">{a.checked_in_at}</td>
+                      <td className="px-4 py-2.5 text-slate-400 text-xs">{a.marked_by ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 gap-1 text-xs text-red-500 opacity-60 hover:opacity-100"
+                          onClick={() => handleRemove(a.id, a.name)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />Remover
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+
+                {/* Not-attended rows */}
+                {notAttended.length > 0 && (
+                  <tbody className="divide-y divide-slate-50">
+                    <tr className="border-t-2 border-slate-100 bg-slate-50/70">
+                      <td colSpan={8} className="px-4 py-2">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isAllMark}
+                            ref={(el) => { if (el) el.indeterminate = isIndeterminateMark; }}
+                            onChange={toggleAllMark}
+                            className="rounded border-gray-300 text-green-600 shadow-sm focus:ring-green-500 cursor-pointer"
+                          />
+                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                            Não presentes — {notAttended.length}
+                          </span>
+                          {markCount > 0 && (
+                            <span className="text-xs text-green-700 font-medium">
+                              {markCount} selecionado{markCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {notAttended.map((s) => (
+                      <tr
+                        key={s.id}
+                        className={`cursor-pointer transition-colors ${isMarked(s.id) ? 'bg-green-50' : 'hover:bg-slate-50/60'}`}
+                        onClick={() => toggleMark(s.id)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />Remover
-                      </Button>
+                        <td className="w-10 px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isMarked(s.id)}
+                            onChange={() => toggleMark(s.id)}
+                            className="rounded border-gray-300 text-green-600 shadow-sm focus:ring-green-500 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-6 py-2.5 font-medium text-slate-400">
+                          {s.name}
+                          {s.role === 'teacher' && (
+                            <Badge className="bg-blue-100 text-blue-700 text-xs ml-2 opacity-60">Professor</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-300 text-xs">{s.phone ?? '—'}</td>
+                        <td className="px-4 py-2.5">
+                          {s.grupo_homogeneo
+                            ? <Badge className={`text-xs opacity-50 ${grupoColors[s.grupo_homogeneo] ?? ''}`}>{s.grupo_homogeneo}</Badge>
+                            : <span className="text-slate-200 text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-200 text-xs">—</td>
+                        <td className="px-4 py-2.5 text-slate-200 text-xs">—</td>
+                        <td className="px-4 py-2.5 text-slate-200 text-xs">—</td>
+                        <td className="px-4 py-2.5"></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                )}
+              </table>
+            </div>
+
+            {/* Mobile */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {attended.data.length === 0 && notAttended.length === 0 && (
+                <div className="py-12 text-center text-slate-400">
+                  <Users className="h-10 w-10 mx-auto mb-3 opacity-25" />
+                  <p className="font-medium text-sm">Ainda não há presenças registadas</p>
+                </div>
+              )}
+              {attended.data.map((a) => (
+                <div key={a.id} className={`px-4 py-3 flex items-center gap-3 ${isSelected(a.id) ? 'bg-blue-50/40' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected(a.id)}
+                    onChange={() => toggleOne(a.id)}
+                    className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 cursor-pointer shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-slate-800 truncate">
+                      {a.name}
+                      {a.role === 'teacher' && (
+                        <Badge className="bg-blue-100 text-blue-800 text-xs ml-2">Professor</Badge>
+                      )}
+                    </p>
+                    <p className="text-xs text-slate-400">{a.phone}</p>
+                  </div>
+                  <div className="shrink-0 flex flex-col items-end gap-1">
+                    <Badge
+                      variant="outline"
+                      className={
+                        a.method === 'qr'
+                          ? 'border-purple-300 text-purple-700 text-xs'
+                          : a.method === 'auto'
+                          ? 'border-green-300 text-green-700 text-xs'
+                          : 'border-slate-300 text-slate-600 text-xs'
+                      }
+                    >
+                      {a.method_label}
+                    </Badge>
+                    <span className="text-xs text-slate-400">{a.checked_in_at}</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 gap-1 text-xs text-red-500 opacity-60 hover:opacity-100 shrink-0"
+                    onClick={() => handleRemove(a.id, a.name)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />Remover
+                  </Button>
+                </div>
+              ))}
+              {notAttended.length > 0 && (
+                <>
+                  <div className="px-4 py-2 bg-slate-50 border-t-2 border-slate-100 flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isAllMark}
+                      ref={(el) => { if (el) el.indeterminate = isIndeterminateMark; }}
+                      onChange={toggleAllMark}
+                      className="rounded border-gray-300 text-green-600 shadow-sm focus:ring-green-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                      Não presentes — {notAttended.length}
+                    </span>
+                  </div>
+                  {notAttended.map((s) => (
+                    <div
+                      key={s.id}
+                      className={`px-4 py-3 flex items-center gap-3 cursor-pointer ${isMarked(s.id) ? 'bg-green-50' : ''}`}
+                      onClick={() => toggleMark(s.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isMarked(s.id)}
+                        onChange={() => toggleMark(s.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded border-gray-300 text-green-600 shadow-sm focus:ring-green-500 cursor-pointer shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-slate-400 truncate">{s.name}</p>
+                        <p className="text-xs text-slate-300">{s.phone ?? '—'}</p>
+                      </div>
+                      <Badge variant="outline" className="border-slate-200 text-slate-300 text-xs shrink-0">Ausente</Badge>
                     </div>
                   ))}
+                </>
+              )}
+            </div>
+
+            {/* Sticky submit bar */}
+            {markCount > 0 && (
+              <div className="sticky bottom-0 flex items-center justify-between gap-3 px-4 py-3 border-t border-green-100 bg-green-50">
+                <span className="text-sm text-green-800 font-medium">
+                  {markCount} aluno{markCount !== 1 ? 's' : ''} · {studySession.session_date}
+                </span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" className="h-8 text-xs text-green-700" onClick={() => setMarkSelected(new Set())}>
+                    Limpar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                    disabled={bulkMarking}
+                    onClick={handleBulkMarkPresent}
+                  >
+                    {bulkMarking
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />A marcar…</>
+                      : <><CheckCircle2 className="h-3.5 w-3.5" />Submeter presenças</>}
+                  </Button>
                 </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>

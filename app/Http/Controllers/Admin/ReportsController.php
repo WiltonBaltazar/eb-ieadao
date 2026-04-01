@@ -223,24 +223,39 @@ class ReportsController extends Controller
             $sessionsQuery->whereYear('session_date', $year);
         }
 
-        $totalSessions = $sessionsQuery->count();
-
-        $sessionIds = $sessionsQuery->pluck('id');
+        $sessions = $sessionsQuery->orderBy('session_date')->get();
+        $sessionIds = $sessions->pluck('id');
+        $totalSessions = $sessions->count();
 
         $students = User::where('classroom_id', $classroom->id)
             ->where('role', 'student')
-            ->with(['attendances' => fn ($q) => $q->whereIn('study_session_id', $sessionIds)])
+            ->with([
+                'attendances' => fn ($q) => $q->whereIn('study_session_id', $sessionIds),
+                'enrollments' => fn ($q) => $q->where('classroom_id', $classroom->id)
+                    ->when($year, fn ($q) => $q->where('academic_year', $year))
+                    ->whereNull('transferred_at'),
+            ])
             ->orderBy('name')
             ->get()
-            ->map(function ($s) use ($totalSessions) {
-                $attended = $s->attendances->count();
+            ->map(function ($s) use ($sessions) {
+                $enrollment = $s->enrollments->first();
+                $enrolledAt = $enrollment?->enrolled_at?->toDateString();
+
+                $eligibleSessions = $enrolledAt
+                    ? $sessions->filter(fn ($sess) => $sess->session_date->toDateString() >= $enrolledAt)
+                    : $sessions;
+
+                $eligibleIds = $eligibleSessions->pluck('id')->all();
+                $total       = $eligibleSessions->count();
+                $attended    = $s->attendances->whereIn('study_session_id', $eligibleIds)->count();
+
                 return [
-                    'name'   => $s->name,
-                    'phone'  => $s->phone ?? '',
-                    'grupo'  => $s->grupo_homogeneo?->label() ?? '',
+                    'name'    => $s->name,
+                    'phone'   => $s->phone ?? '',
+                    'grupo'   => $s->grupo_homogeneo?->label() ?? '',
                     'attended' => $attended,
-                    'total'  => $totalSessions,
-                    'rate'   => $totalSessions > 0 ? round(($attended / $totalSessions) * 100) : 0,
+                    'total'   => $total,
+                    'rate'    => $total > 0 ? round(($attended / $total) * 100) : 0,
                 ];
             });
 

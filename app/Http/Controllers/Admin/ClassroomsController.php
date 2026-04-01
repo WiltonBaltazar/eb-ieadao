@@ -129,13 +129,22 @@ class ClassroomsController extends Controller
             $availableYears = collect([$currentYear]);
         }
 
-        $yearSessionIds = StudySession::where('classroom_id', $classroom->id)
+        $yearSessions = StudySession::where('classroom_id', $classroom->id)
             ->whereIn('status', ['open', 'closed'])
             ->whereYear('session_date', $year)
-            ->pluck('id');
+            ->orderBy('session_date')
+            ->get(['id', 'session_date']);
+
+        $yearSessionIds = $yearSessions->pluck('id');
+        $totalSessions = $yearSessions->count();
 
         $query = $classroom->studentsForYear($year)
-            ->with(['attendances' => fn ($q) => $q->whereIn('study_session_id', $yearSessionIds)]);
+            ->with([
+                'attendances' => fn ($q) => $q->whereIn('study_session_id', $yearSessionIds),
+                'enrollments' => fn ($q) => $q->where('classroom_id', $classroom->id)
+                    ->where('academic_year', $year)
+                    ->whereNull('transferred_at'),
+            ]);
 
         if ($request->filled('search')) {
             $s = $request->search;
@@ -150,8 +159,6 @@ class ClassroomsController extends Controller
             $query->where('grupo_homogeneo', $request->grupo_homogeneo);
         }
 
-        $totalSessions = $yearSessionIds->count();
-
         $sortable = ['name', 'phone', 'grupo_homogeneo'];
         $sortBy = in_array($request->input('sort_by'), $sortable) ? $request->input('sort_by') : 'name';
         $sortDir = $request->input('sort_dir') === 'desc' ? 'desc' : 'asc';
@@ -159,23 +166,34 @@ class ClassroomsController extends Controller
 
         $perPage = in_array((int) $request->input('per_page'), [25, 50, 100]) ? (int) $request->input('per_page') : 25;
 
-        $students = $query->paginate($perPage)->withQueryString()->through(fn ($u) => [
-            'id'                    => $u->id,
-            'name'                  => $u->name,
-            'phone'                 => $u->phone,
-            'whatsapp'              => $u->whatsapp,
-            'alt_contact'           => $u->alt_contact,
-            'role'                  => $u->role->value,
-            'grupo_homogeneo'       => $u->grupo_homogeneo?->value,
-            'grupo_homogeneo_label' => $u->grupo_homogeneo?->label(),
-            'attended'              => $u->attendances->count(),
-            'total_sessions'        => $totalSessions,
-            'rate'                  => $totalSessions > 0
-                                         ? round(($u->attendances->count() / $totalSessions) * 100)
-                                         : 0,
-            'readiness'             => $u->readiness()->value,
-            'readiness_label'       => $u->readinessLabel(),
-        ]);
+        $students = $query->paginate($perPage)->withQueryString()->through(function ($u) use ($yearSessions) {
+            $enrollment = $u->enrollments->first();
+            $enrolledAt = $enrollment?->enrolled_at?->toDateString();
+
+            $eligibleSessions = $enrolledAt
+                ? $yearSessions->filter(fn ($s) => $s->session_date->toDateString() >= $enrolledAt)
+                : $yearSessions;
+
+            $eligibleIds = $eligibleSessions->pluck('id')->all();
+            $total       = $eligibleSessions->count();
+            $attended    = $u->attendances->whereIn('study_session_id', $eligibleIds)->count();
+
+            return [
+                'id'                    => $u->id,
+                'name'                  => $u->name,
+                'phone'                 => $u->phone,
+                'whatsapp'              => $u->whatsapp,
+                'alt_contact'           => $u->alt_contact,
+                'role'                  => $u->role->value,
+                'grupo_homogeneo'       => $u->grupo_homogeneo?->value,
+                'grupo_homogeneo_label' => $u->grupo_homogeneo?->label(),
+                'attended'              => $attended,
+                'total_sessions'        => $total,
+                'rate'                  => $total > 0 ? round(($attended / $total) * 100) : 0,
+                'readiness'             => $u->readiness()->value,
+                'readiness_label'       => $u->readinessLabel(),
+            ];
+        });
 
         return Inertia::render('Admin/TurmaAlunos', [
             'classroom' => [
