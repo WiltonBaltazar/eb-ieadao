@@ -132,19 +132,13 @@ class User extends Authenticatable
             ->active()
             ->first();
 
-        $fromDate = $enrollment?->enrolled_at ?? $this->created_at;
-        if ($fromDate) {
-            $requiredIds = StudySession::where('classroom_id', $this->classroom_id)
-                ->whereIn('status', ['open', 'closed'])
-                ->whereYear('session_date', $year)
-                ->where('session_date', '>=', $fromDate->toDateString())
-                ->pluck('id');
-        } else {
-            $requiredIds = StudySession::where('classroom_id', $this->classroom_id)
-                ->whereIn('status', ['open', 'closed'])
-                ->whereYear('session_date', $year)
-                ->pluck('id');
-        }
+        $fromDate = $enrollment?->enrolled_at;
+
+        $requiredIds = StudySession::where('classroom_id', $this->classroom_id)
+            ->whereIn('status', ['open', 'closed'])
+            ->whereYear('session_date', $year)
+            ->when($fromDate, fn ($q) => $q->where('session_date', '>=', $fromDate->toDateString()))
+            ->pluck('id');
 
         // Attended: only sessions from enrollment date onward (ignore admin-added pre-enrollment entries)
         $attendedIds = $this->attendances()
