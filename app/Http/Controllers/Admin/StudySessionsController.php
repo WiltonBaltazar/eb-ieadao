@@ -2,16 +2,22 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\CheckInMethod;
 use App\Enums\GrupoHomogeneo;
+use App\Enums\StudySessionStatus;
 use App\Exceptions\AttendanceException;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Classroom;
+use App\Models\Enrollment;
+use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
 use App\Services\AttendanceService;
 use App\Support\ExcelExport;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -95,6 +101,11 @@ class StudySessionsController extends Controller
             'session_date.required' => 'A data da aula é obrigatória.',
             'session_date.date' => 'A data da aula não é válida.',
         ]);
+
+        if (Carbon::parse($validated['session_date'])->isBefore(today())) {
+            $validated['status'] = StudySessionStatus::Closed;
+            $validated['attendance_closed_at'] = now();
+        }
 
         StudySession::create($validated);
         return back()->with('success', 'Aula criada com sucesso.');
@@ -354,6 +365,140 @@ class StudySessionsController extends Controller
         }
 
         return back()->with('success', "{$student->name} registado e presença marcada.");
+    }
+
+    public function attendanceTemplate(StudySession $studySession): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $filename = 'template-presencas-' . $studySession->session_date->format('Y-m-d') . '.xlsx';
+
+        return ExcelExport::download($filename, function ($sheet) {
+            $headers = ['name', 'phone', 'grupo_homogeneo'];
+            foreach ($headers as $i => $h) {
+                $sheet->setCellValue([$i + 1, 1], $h);
+            }
+            ExcelExport::styleHeader($sheet, 'A1:C1');
+            $sheet->getColumnDimension('A')->setWidth(30);
+            $sheet->getColumnDimension('B')->setWidth(18);
+            $sheet->getColumnDimension('C')->setWidth(20);
+
+            // Example row
+            $sheet->setCellValue('A2', 'João Silva');
+            $sheet->setCellValue('B2', '841234567');
+            $sheet->setCellValue('C2', 'homens');
+            ExcelExport::styleData($sheet, 'A2:C2', true);
+        });
+    }
+
+    public function importAttendance(Request $request, StudySession $studySession): JsonResponse
+    {
+        $request->validate(['xlsx' => 'required|file|mimes:xlsx,xls|max:5120']);
+
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load(
+                $request->file('xlsx')->getRealPath()
+            );
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Não foi possível ler o ficheiro Excel.'], 422);
+        }
+
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows  = $sheet->toArray(null, true, true, false);
+
+        if (empty($rows)) {
+            return response()->json(['error' => 'Ficheiro Excel vazio.'], 422);
+        }
+
+        // First row is header
+        $header = array_map(fn($h) => strtolower(trim((string) $h)), $rows[0]);
+        $nameIdx  = array_search('name', $header);
+        $phoneIdx = array_search('phone', $header);
+        $grupoIdx = array_search('grupo_homogeneo', $header);
+
+        if ($nameIdx === false || $phoneIdx === false) {
+            return response()->json(['error' => 'O ficheiro deve ter colunas "name" e "phone".'], 422);
+        }
+
+        $year        = Setting::currentAcademicYear();
+        $classroomId = $studySession->classroom_id;
+        $sessionDate = $studySession->session_date->toDateString();
+        $markedBy    = auth()->user();
+
+        $imported = 0;
+        $skipped  = 0;
+        $errors   = [];
+
+        foreach (array_slice($rows, 1) as $i => $line) {
+            $rowNum = $i + 2;
+
+            $name  = trim((string) ($line[$nameIdx] ?? ''));
+            $phone = trim((string) ($line[$phoneIdx] ?? ''));
+
+            if ($name === '' && $phone === '') continue;
+
+            if ($name === '') {
+                $errors[] = "Linha {$rowNum}: nome em falta.";
+                continue;
+            }
+            if ($phone === '') {
+                $errors[] = "Linha {$rowNum}: telefone em falta.";
+                continue;
+            }
+
+            $grupo = ($grupoIdx !== false && isset($line[$grupoIdx]))
+                ? trim((string) $line[$grupoIdx]) ?: null
+                : null;
+
+            // Find or create student
+            $student = User::where('phone', $phone)->first();
+            if (!$student) {
+                $student = User::create([
+                    'name'            => $name,
+                    'phone'           => $phone,
+                    'whatsapp'        => $phone,
+                    'classroom_id'    => $classroomId,
+                    'role'            => 'student',
+                    'grupo_homogeneo' => $grupo,
+                    'password'        => null,
+                ]);
+            }
+
+            // Ensure enrollment exists with enrolled_at <= session_date
+            $enrollment = Enrollment::where('student_id', $student->id)
+                ->where('classroom_id', $classroomId)
+                ->where('academic_year', $year)
+                ->whereNull('transferred_at')
+                ->first();
+
+            if (!$enrollment) {
+                Enrollment::create([
+                    'student_id'     => $student->id,
+                    'classroom_id'   => $classroomId,
+                    'academic_year'  => $year,
+                    'enrolled_at'    => $sessionDate,
+                    'enrolled_by_id' => $markedBy?->id,
+                ]);
+
+                if ($year === Setting::currentAcademicYear()) {
+                    $student->update(['classroom_id' => $classroomId]);
+                }
+            } elseif ($enrollment->enrolled_at && $enrollment->enrolled_at->toDateString() > $sessionDate) {
+                $enrollment->update(['enrolled_at' => $sessionDate]);
+            }
+
+            // Mark present
+            try {
+                $this->attendanceService->createAttendance($studySession, $student, $markedBy, CheckInMethod::Manual);
+                $imported++;
+            } catch (AttendanceException) {
+                $skipped++;
+            }
+        }
+
+        return response()->json([
+            'imported' => $imported,
+            'skipped'  => $skipped,
+            'errors'   => $errors,
+        ]);
     }
 
     public function exportExcel(StudySession $studySession): \Symfony\Component\HttpFoundation\BinaryFileResponse

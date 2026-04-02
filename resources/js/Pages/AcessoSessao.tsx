@@ -161,12 +161,12 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
                   </label>
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
-                      +244
+                      +258
                     </span>
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="9XXXXXXXX"
+                      placeholder="8XXXXXXXX"
                       value={data.phone}
                       onChange={(e) => setData('phone', e.target.value)}
                       autoFocus={!auth_phone}
@@ -197,8 +197,8 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
         )}
 
         <p className="text-center text-xs text-slate-400 pb-2">
-          <Link href="/entrar" className="text-slate-500 font-medium hover:text-slate-700 underline underline-offset-2">
-            Entrar na minha conta
+          <Link href={auth_name ? '/meu-perfil' : '/entrar'} className="text-slate-500 font-medium hover:text-slate-700 underline underline-offset-2">
+            {auth_name ? 'Ir para o meu perfil' : 'Entrar na minha conta'}
           </Link>
         </p>
       </div>
