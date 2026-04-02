@@ -239,6 +239,41 @@ export default function SessaoPresencas({
     );
   };
 
+  // ── CSV import ──
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile]           = useState<File | null>(null);
+  const [importing, setImporting]             = useState(false);
+  const [importResult, setImportResult]       = useState<{ imported: number; skipped: number; errors: string[] } | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
+  const openImportModal = () => {
+    setImportFile(null);
+    setImportResult(null);
+    setShowImportModal(true);
+    if (csvInputRef.current) csvInputRef.current.value = '';
+  };
+
+  const submitImportCsv = () => {
+    if (!importFile) return;
+    setImporting(true);
+    setImportResult(null);
+    const formData = new FormData();
+    formData.append('xlsx', importFile);
+    formData.append('_token', (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '');
+    fetch(`/admin/sessoes/${studySession.id}/importar-presencas`, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+      body: formData,
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setImportResult(data);
+        setImporting(false);
+        if (!data.error) router.reload({ only: ['attended', 'notAttended'] });
+      })
+      .catch(() => setImporting(false));
+  };
+
   // ── Resources ──
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPdfForm, setShowPdfForm] = useState(false);
@@ -361,6 +396,15 @@ export default function SessaoPresencas({
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-indigo-700 border-indigo-300 hover:bg-indigo-50"
+              onClick={openImportModal}
+            >
+              <Upload className="h-4 w-4" />
+              Importar CSV
+            </Button>
             <Button asChild variant="outline" size="sm" className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50">
               <a href={`/admin/sessoes/${studySession.id}/exportar-excel`} download="presencas.xlsx">
                 <FileSpreadsheet className="h-4 w-4" />
@@ -1140,6 +1184,86 @@ export default function SessaoPresencas({
           onPerPageChange={handlePerPage}
         />
       </div>
+
+      {/* ── CSV Import Modal ── */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                <Upload className="h-4 w-4 text-indigo-500" />
+                Importar presenças via CSV
+              </h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowImportModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600 space-y-1">
+              <p className="font-medium text-slate-700">Colunas obrigatórias:</p>
+              <code className="block text-indigo-700">name · phone · grupo_homogeneo (opcional)</code>
+              <p>O aluno é encontrado pelo telefone ou criado se não existir. A matrícula é criada/actualizada automaticamente.</p>
+              <a
+                href={`/admin/sessoes/${studySession.id}/template-presencas`}
+                className="inline-flex items-center gap-1 text-indigo-600 hover:underline mt-1"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                Descarregar template .xlsx
+              </a>
+            </div>
+
+            {importResult ? (
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex-1 rounded-lg bg-green-50 border border-green-200 p-3 text-center">
+                    <p className="text-2xl font-bold text-green-700">{importResult.imported}</p>
+                    <p className="text-xs text-green-600">importadas</p>
+                  </div>
+                  <div className="flex-1 rounded-lg bg-slate-50 border border-slate-200 p-3 text-center">
+                    <p className="text-2xl font-bold text-slate-600">{importResult.skipped}</p>
+                    <p className="text-xs text-slate-500">já existiam</p>
+                  </div>
+                </div>
+                {importResult.errors.length > 0 && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-3 space-y-1">
+                    <p className="text-xs font-medium text-red-700">Erros:</p>
+                    {importResult.errors.map((err, i) => (
+                      <p key={i} className="text-xs text-red-600">{err}</p>
+                    ))}
+                  </div>
+                )}
+                <Button className="w-full" onClick={() => setShowImportModal(false)}>Fechar</Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm mb-1.5 block">Ficheiro CSV</Label>
+                  <input
+                    ref={csvInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    className="block w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100"
+                    onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                    disabled={!importFile || importing}
+                    onClick={submitImportCsv}
+                  >
+                    {importing
+                      ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />A importar…</>
+                      : <><Upload className="h-4 w-4 mr-1.5" />Importar</>
+                    }
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowImportModal(false)}>Cancelar</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

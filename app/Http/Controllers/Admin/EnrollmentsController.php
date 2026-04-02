@@ -71,6 +71,7 @@ class EnrollmentsController extends Controller
     {
         $request->validate([
             'year'                    => 'required|integer|min:2000|max:2100',
+            'enrolled_at'             => 'nullable|date|before_or_equal:today',
             'assignments'             => 'required|array|min:1',
             'assignments.*.student_id'  => 'required|integer|exists:users,id',
             'assignments.*.classroom_id'=> 'required|integer|exists:classrooms,id',
@@ -93,7 +94,9 @@ class EnrollmentsController extends Controller
                     'student_id'     => $studentId,
                     'classroom_id'   => $classroomId,
                     'academic_year'  => $year,
-                    'enrolled_at'    => now(),
+                    'enrolled_at'    => $request->filled('enrolled_at')
+                        ? Carbon::parse($request->enrolled_at)->startOfDay()
+                        : now(),
                     'enrolled_by_id' => $request->user()?->id,
                 ]);
 

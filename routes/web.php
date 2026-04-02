@@ -69,6 +69,8 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::get('/utilizadores', [UsersController::class, 'index'])->name('admin.users.index');
     Route::post('/utilizadores', [UsersController::class, 'store'])->name('admin.users.store');
     Route::post('/utilizadores/bulk-destroy', [UsersController::class, 'bulkDestroy'])->name('admin.users.bulk-destroy');
+    Route::get('/utilizadores/template-alunos', [UsersController::class, 'studentsTemplate'])->name('admin.users.students-template');
+    Route::post('/utilizadores/importar-alunos', [UsersController::class, 'importStudents'])->name('admin.users.import-students');
     Route::get('/utilizadores/{user}', [UsersController::class, 'show'])->name('admin.users.show');
     Route::put('/utilizadores/{user}', [UsersController::class, 'update'])->name('admin.users.update');
     Route::patch('/utilizadores/{user}/papel', [UsersController::class, 'updateRole'])->name('admin.users.update-role');
@@ -96,6 +98,8 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::get('/sessoes/{studySession}/presencas', [StudySessionsController::class, 'attendance'])->name('admin.sessions.attendance');
     Route::get('/sessoes/{studySession}/exportar-excel', [StudySessionsController::class, 'exportExcel'])->name('admin.sessions.export-excel');
     Route::post('/sessoes/{studySession}/registar-e-marcar', [StudySessionsController::class, 'registerAndMark'])->name('admin.sessions.register-and-mark');
+    Route::post('/sessoes/{studySession}/importar-presencas', [StudySessionsController::class, 'importAttendance'])->name('admin.sessions.import-attendance');
+    Route::get('/sessoes/{studySession}/template-presencas', [StudySessionsController::class, 'attendanceTemplate'])->name('admin.sessions.attendance-template');
     Route::post('/presencas/bulk-destroy', [StudySessionsController::class, 'bulkDestroyAttendances'])->name('admin.attendances.bulk-destroy');
     Route::delete('/presencas/{attendance}', [StudySessionsController::class, 'removeAttendance'])->name('admin.attendances.destroy');
 

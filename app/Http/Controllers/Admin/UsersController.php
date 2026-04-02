@@ -11,6 +11,8 @@ use App\Models\Enrollment;
 use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
+use App\Support\ExcelExport;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -107,19 +109,30 @@ class UsersController extends Controller
             ->whereYear('session_date', $selectedYear)
             ->with('teacher');
 
-        if ($enrollmentForYear?->enrolled_at) {
-            $query->where('session_date', '>=', $enrollmentForYear->enrolled_at->toDateString());
+        $fromDate = $enrollmentForYear?->enrolled_at ?? $user->created_at;
+        if ($fromDate) {
+            $query->where('session_date', '>=', $fromDate->toDateString());
         }
 
-        // Count totals before pagination
-        $allSessionIds = (clone $query)->pluck('id');
+        // All sessions in classroom/year (without date filter) — for counting actual attendances
+        $allClassroomIds = StudySession::where('classroom_id', $classroomIdForSessions)
+            ->whereIn('status', ['open', 'closed'])
+            ->whereYear('session_date', $selectedYear)
+            ->pluck('id');
+
         $attendanceMap = Attendance::where('student_id', $user->id)
-            ->whereIn('study_session_id', $allSessionIds)
+            ->whereIn('study_session_id', $allClassroomIds)
             ->get()
             ->keyBy('study_session_id');
 
-        $totalAll = $allSessionIds->count();
+        $attendedIds = $attendanceMap->keys();
         $attendedAll = $attendanceMap->count();
+
+        // Sessions from enrollment date onward (for total denominator)
+        $requiredIds = (clone $query)->pluck('id');
+
+        // Total = required sessions ∪ any attended before the cutoff (don't hide early attendances)
+        $totalAll = $requiredIds->union($attendedIds)->unique()->count();
         $rate = $totalAll > 0 ? round(($attendedAll / $totalAll) * 100) : 0;
 
         $sortable = ['title', 'session_date'];
@@ -266,5 +279,109 @@ class UsersController extends Controller
         $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer|exists:users,id']);
         User::whereIn('id', $request->ids)->delete();
         return back()->with('success', count($request->ids) . ' utilizador(es) eliminado(s).');
+    }
+
+    public function studentsTemplate(): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        return ExcelExport::download('template-alunos.xlsx', function ($sheet) {
+            $headers = ['name', 'phone', 'grupo_homogeneo'];
+            foreach ($headers as $i => $h) {
+                $sheet->setCellValue([$i + 1, 1], $h);
+            }
+            ExcelExport::styleHeader($sheet, 'A1:C1');
+            $sheet->getColumnDimension('A')->setWidth(30);
+            $sheet->getColumnDimension('B')->setWidth(18);
+            $sheet->getColumnDimension('C')->setWidth(20);
+
+            // Example row
+            $sheet->setCellValue('A2', 'João Silva');
+            $sheet->setCellValue('B2', '841234567');
+            $sheet->setCellValue('C2', 'homens');
+            ExcelExport::styleData($sheet, 'A2:C2', true);
+        });
+    }
+
+    public function importStudents(Request $request): JsonResponse
+    {
+        $request->validate([
+            'xlsx'         => 'required|file|mimes:xlsx,xls|max:5120',
+            'classroom_id' => 'required|exists:classrooms,id',
+        ]);
+
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load(
+                $request->file('xlsx')->getRealPath()
+            );
+        } catch (\Exception) {
+            return response()->json(['error' => 'Não foi possível ler o ficheiro Excel.'], 422);
+        }
+
+        $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, false);
+
+        if (empty($rows)) {
+            return response()->json(['error' => 'Ficheiro Excel vazio.'], 422);
+        }
+
+        $header   = array_map(fn($h) => strtolower(trim((string) $h)), $rows[0]);
+        $nameIdx  = array_search('name', $header);
+        $phoneIdx = array_search('phone', $header);
+        $grupoIdx = array_search('grupo_homogeneo', $header);
+
+        if ($nameIdx === false || $phoneIdx === false) {
+            return response()->json(['error' => 'O ficheiro deve ter colunas "name" e "phone".'], 422);
+        }
+
+        $classroom   = Classroom::findOrFail($request->classroom_id);
+        $year        = Setting::currentAcademicYear();
+        $created     = 0;
+        $skipped     = 0;
+        $errors      = [];
+
+        foreach (array_slice($rows, 1) as $i => $line) {
+            $rowNum = $i + 2;
+            $name   = trim((string) ($line[$nameIdx] ?? ''));
+            $phone  = trim((string) ($line[$phoneIdx] ?? ''));
+
+            if ($name === '' && $phone === '') continue;
+
+            if ($name === '') { $errors[] = "Linha {$rowNum}: nome em falta."; continue; }
+            if ($phone === '') { $errors[] = "Linha {$rowNum}: telefone em falta."; continue; }
+
+            // Skip if phone already registered
+            if (User::where('phone', $phone)->exists()) {
+                $skipped++;
+                continue;
+            }
+
+            $grupo = ($grupoIdx !== false && isset($line[$grupoIdx]))
+                ? trim((string) $line[$grupoIdx]) ?: null
+                : null;
+
+            $student = User::create([
+                'name'            => $name,
+                'phone'           => $phone,
+                'whatsapp'        => $phone,
+                'role'            => 'student',
+                'grupo_homogeneo' => $grupo,
+                'classroom_id'    => $classroom->id,
+                'password'        => null,
+            ]);
+
+            Enrollment::create([
+                'student_id'     => $student->id,
+                'classroom_id'   => $classroom->id,
+                'academic_year'  => $year,
+                'enrolled_at'    => now(),
+                'enrolled_by_id' => auth()->id(),
+            ]);
+
+            $created++;
+        }
+
+        return response()->json([
+            'created' => $created,
+            'skipped' => $skipped,
+            'errors'  => $errors,
+        ]);
     }
 }
