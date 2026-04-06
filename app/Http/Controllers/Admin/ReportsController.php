@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
@@ -210,6 +211,203 @@ class ReportsController extends Controller
 
             fclose($handle);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportPeriodExcel(Request $request): BinaryFileResponse
+    {
+        $request->validate([
+            'from'         => 'required|date',
+            'to'           => 'required|date|after_or_equal:from',
+            'classroom_id' => 'nullable|exists:classrooms,id',
+        ]);
+
+        $from        = Carbon::parse($request->from)->startOfDay();
+        $to          = Carbon::parse($request->to)->endOfDay();
+        $classroomId = $request->input('classroom_id');
+
+        $query = StudySession::with(['attendances', 'classroom'])
+            ->whereIn('status', ['open', 'closed'])
+            ->whereBetween('session_date', [$from, $to])
+            ->orderBy('session_date');
+
+        if ($classroomId) {
+            $query->where('classroom_id', $classroomId);
+        }
+
+        $sessions = $query->get()->map(function ($session) {
+            $attended = $session->attendances->count();
+
+            $enrolled = Enrollment::where('classroom_id', $session->classroom_id)
+                ->where('academic_year', $session->session_date->year)
+                ->where('enrolled_at', '<=', $session->session_date)
+                ->where(fn ($q) => $q->whereNull('transferred_at')
+                    ->orWhere('transferred_at', '>', $session->session_date))
+                ->count();
+
+            return [
+                'date'      => $session->session_date->format('d/m/Y'),
+                'title'     => $session->title,
+                'classroom' => $session->classroom->name,
+                'attended'  => $attended,
+                'enrolled'  => $enrolled,
+                'rate'      => $enrolled > 0 ? round(($attended / $enrolled) * 100) : 0,
+            ];
+        });
+
+        $suffix   = $from->format('Y-m-d') . '_' . $to->format('Y-m-d');
+        $filename = "presencas_{$suffix}.xlsx";
+
+        return ExcelExport::download($filename, function ($sheet) use ($sessions, $from, $to, $classroomId) {
+            $classroomName = $classroomId ? Classroom::find($classroomId)?->name : 'Todas as turmas';
+
+            $sheet->setCellValue('A1', "Relatório de Presenças — {$from->format('d/m/Y')} a {$to->format('d/m/Y')}");
+            $sheet->setCellValue('A2', "{$classroomName}  ·  Exportado em " . now()->format('d/m/Y'));
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+            $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setARGB('FF64748B');
+            $sheet->mergeCells('A1:F1');
+            $sheet->mergeCells('A2:F2');
+
+            foreach (['Data', 'Sessão', 'Turma', 'Presenças', 'Matriculados', 'Taxa (%)'] as $i => $h) {
+                $sheet->setCellValue([$i + 1, 4], $h);
+            }
+            ExcelExport::styleHeader($sheet, 'A4:F4');
+            $sheet->getRowDimension(4)->setRowHeight(22);
+
+            foreach ($sessions as $idx => $s) {
+                $row = $idx + 5;
+                $sheet->setCellValue([1, $row], $s['date']);
+                $sheet->setCellValue([2, $row], $s['title']);
+                $sheet->setCellValue([3, $row], $s['classroom']);
+                $sheet->setCellValue([4, $row], $s['attended']);
+                $sheet->setCellValue([5, $row], $s['enrolled']);
+                $sheet->setCellValue([6, $row], $s['rate'] . '%');
+                ExcelExport::styleData($sheet, "A{$row}:F{$row}", $idx % 2 === 0);
+
+                $color = $s['rate'] >= 75 ? 'FFD1FAE5' : ($s['rate'] >= 50 ? 'FFFEF3C7' : 'FFFEE2E2');
+                $sheet->getStyle("F{$row}")->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB($color);
+            }
+
+            foreach ([['A', 12], ['B', 38], ['C', 22], ['D', 13], ['E', 14], ['F', 12]] as [$col, $width]) {
+                $sheet->getColumnDimension($col)->setWidth($width);
+            }
+
+            if ($sessions->count() > 0) {
+                $sheet->getStyle('D5:F' . ($sessions->count() + 4))->getAlignment()
+                    ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            }
+        });
+    }
+
+    public function exportStudentsPeriodExcel(Request $request): BinaryFileResponse
+    {
+        $request->validate([
+            'from'         => 'required|date',
+            'to'           => 'required|date|after_or_equal:from',
+            'classroom_id' => 'nullable|exists:classrooms,id',
+        ]);
+
+        $from        = Carbon::parse($request->from)->startOfDay();
+        $to          = Carbon::parse($request->to)->endOfDay();
+        $classroomId = $request->input('classroom_id');
+
+        // Sessions in the period
+        $sessionsQuery = StudySession::whereIn('status', ['open', 'closed'])
+            ->whereBetween('session_date', [$from, $to])
+            ->orderBy('session_date');
+
+        if ($classroomId) {
+            $sessionsQuery->where('classroom_id', $classroomId);
+        }
+
+        $sessions    = $sessionsQuery->get();
+        $sessionIds  = $sessions->pluck('id');
+
+        // Students enrolled in the relevant classrooms
+        $classroomIds = $classroomId
+            ? [$classroomId]
+            : $sessions->pluck('classroom_id')->unique()->values()->all();
+
+        $students = User::where('role', 'student')
+            ->whereIn('classroom_id', $classroomIds)
+            ->with([
+                'attendances' => fn ($q) => $q->whereIn('study_session_id', $sessionIds),
+                'enrollments' => fn ($q) => $q->whereIn('classroom_id', $classroomIds)
+                    ->whereNull('transferred_at'),
+            ])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($student) use ($sessions) {
+                $enrollment  = $student->enrollments->first();
+                $enrolledAt  = $enrollment?->enrolled_at;
+
+                // Only count sessions from the student's enrollment date onward
+                $eligible = $enrolledAt
+                    ? $sessions->filter(fn ($s) => $s->classroom_id === $student->classroom_id
+                        && $s->session_date->toDateString() >= $enrolledAt->toDateString())
+                    : $sessions->filter(fn ($s) => $s->classroom_id === $student->classroom_id);
+
+                $eligibleIds = $eligible->pluck('id')->all();
+                $total       = $eligible->count();
+                $attended    = $student->attendances->whereIn('study_session_id', $eligibleIds)->count();
+
+                return [
+                    'name'      => $student->name,
+                    'phone'     => $student->phone ?? '',
+                    'classroom' => $student->classroom?->name ?? '',
+                    'grupo'     => $student->grupo_homogeneo?->label() ?? '',
+                    'attended'  => $attended,
+                    'total'     => $total,
+                    'rate'      => $total > 0 ? round(($attended / $total) * 100) : 0,
+                ];
+            });
+
+        $suffix   = $from->format('Y-m-d') . '_' . $to->format('Y-m-d');
+        $filename = "alunos_presencas_{$suffix}.xlsx";
+
+        return ExcelExport::download($filename, function ($sheet) use ($students, $from, $to, $classroomId) {
+            $classroomName = $classroomId ? Classroom::find($classroomId)?->name : 'Todas as turmas';
+
+            $sheet->setCellValue('A1', "Presenças por Aluno — {$from->format('d/m/Y')} a {$to->format('d/m/Y')}");
+            $sheet->setCellValue('A2', "{$classroomName}  ·  Exportado em " . now()->format('d/m/Y'));
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+            $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setARGB('FF64748B');
+            $sheet->mergeCells('A1:G1');
+            $sheet->mergeCells('A2:G2');
+
+            foreach (['Nome', 'Telefone', 'Turma', 'Grupo Homogéneo', 'Presenças', 'Total Sessões', 'Taxa (%)'] as $i => $h) {
+                $sheet->setCellValue([$i + 1, 4], $h);
+            }
+            ExcelExport::styleHeader($sheet, 'A4:G4');
+            $sheet->getRowDimension(4)->setRowHeight(22);
+
+            foreach ($students as $idx => $s) {
+                $row = $idx + 5;
+                $sheet->setCellValue([1, $row], $s['name']);
+                $sheet->setCellValue([2, $row], $s['phone']);
+                $sheet->setCellValue([3, $row], $s['classroom']);
+                $sheet->setCellValue([4, $row], $s['grupo']);
+                $sheet->setCellValue([5, $row], $s['attended']);
+                $sheet->setCellValue([6, $row], $s['total']);
+                $sheet->setCellValue([7, $row], $s['rate'] . '%');
+                ExcelExport::styleData($sheet, "A{$row}:G{$row}", $idx % 2 === 0);
+
+                $color = $s['rate'] >= 75 ? 'FFD1FAE5' : ($s['rate'] >= 50 ? 'FFFEF3C7' : 'FFFEE2E2');
+                $sheet->getStyle("G{$row}")->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB($color);
+            }
+
+            foreach ([['A', 30], ['B', 16], ['C', 22], ['D', 24], ['E', 12], ['F', 14], ['G', 12]] as [$col, $width]) {
+                $sheet->getColumnDimension($col)->setWidth($width);
+            }
+
+            if ($students->count() > 0) {
+                $sheet->getStyle('E5:G' . ($students->count() + 4))->getAlignment()
+                    ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            }
+        });
     }
 
     public function exportClassroomExcel(Request $request, Classroom $classroom): \Symfony\Component\HttpFoundation\BinaryFileResponse
