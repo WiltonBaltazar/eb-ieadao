@@ -174,10 +174,40 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                     <Label htmlFor="compare" className="text-xs cursor-pointer">Comparar com período anterior</Label>
                   </div>
                 </div>
-                <div className="flex gap-2 mt-3">
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPreset('this-month')}>Este mês</Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPreset('last-month')}>Mês passado</Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPreset('last-3-months')}>Últimos 3 meses</Button>
+                <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPreset('this-month')}>Este mês</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPreset('last-month')}>Mês passado</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPreset('last-3-months')}>Últimos 3 meses</Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        const params = new URLSearchParams({ from, to });
+                        if (classroomId !== 'all') params.set('classroom_id', classroomId);
+                        window.location.href = `/admin/relatorios/periodo/exportar-excel?${params}`;
+                      }}
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      Por Sessão
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => {
+                        const params = new URLSearchParams({ from, to });
+                        if (classroomId !== 'all') params.set('classroom_id', classroomId);
+                        window.location.href = `/admin/relatorios/periodo/exportar-excel-alunos?${params}`;
+                      }}
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      Por Aluno
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
