@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\GrupoHomogeneo;
 use App\Exceptions\AttendanceException;
 use App\Models\Classroom;
+use App\Models\Enrollment;
+use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
 use App\Services\AttendanceService;
@@ -67,6 +69,13 @@ class RegistrationController extends Controller
             'password' => null,
         ]);
 
+        Enrollment::create([
+            'student_id'    => $student->id,
+            'classroom_id'  => $validated['classroom_id'],
+            'academic_year' => Setting::currentAcademicYear(),
+            'enrolled_at'   => now(),
+        ]);
+
         Auth::login($student);
         $request->session()->regenerate();
 
@@ -125,6 +134,13 @@ class RegistrationController extends Controller
             'whatsapp' => $validated['phone'],
             'role' => 'student',
             'password' => null,
+        ]);
+
+        Enrollment::create([
+            'student_id'    => $student->id,
+            'classroom_id'  => $validated['classroom_id'],
+            'academic_year' => Setting::currentAcademicYear(),
+            'enrolled_at'   => $studySession->session_date->startOfDay(),
         ]);
 
         // Attempt check-in
