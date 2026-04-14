@@ -7,7 +7,9 @@ until php -r "new PDO('mysql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_DATABAS
 done
 echo "Database is ready."
 
-[ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ] && php artisan key:generate --force
+if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then
+    php artisan key:generate --force
+fi
 
 php artisan migrate --force
 php artisan config:cache
