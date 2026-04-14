@@ -4,7 +4,7 @@ FROM node:20-alpine AS node-builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci --prefer-offline
+RUN npm ci --legacy-peer-deps
 
 COPY . .
 RUN npm run build
