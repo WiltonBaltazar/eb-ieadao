@@ -36,10 +36,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Configure Apache
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
+# Configure Apache — point DocumentRoot to Laravel's public/ dir
+RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
         /etc/apache2/sites-available/000-default.conf \
         /etc/apache2/apache2.conf \
     && a2enmod rewrite headers
