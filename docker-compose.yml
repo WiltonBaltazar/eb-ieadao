@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eb-ieadao
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    environment:
+      APP_NAME: "EB IEADAO"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8082
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: eb_ieadao
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      LOG_CHANNEL: stderr
+      LOG_LEVEL: error
+    volumes:
+      - storage_data:/var/www/html/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11
+    container_name: eb-ieadao-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: eb_ieadao
+      MARIADB_USER: laravel
+      MARIADB_PASSWORD: secret
+      MARIADB_ROOT_PASSWORD: rootsecret
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
+  storage_data:
