@@ -19,6 +19,5 @@ php artisan migrate --force
 # Clear & cache config/routes for performance
 php artisan config:cache
 php artisan route:cache
-php artisan view:cache
 
 exec "$@"
