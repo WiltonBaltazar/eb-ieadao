@@ -1,65 +1,40 @@
-# ── Stage 1: Build frontend assets ───────────────────────────────────────────
+# ── Stage 1: Build frontend assets ────────────────────────────────────────────
 FROM node:20-alpine AS node-builder
 
 WORKDIR /app
-
 COPY package.json package-lock.json* ./
 RUN npm ci --legacy-peer-deps
-
 COPY . .
 RUN npm run build
 
 # ── Stage 2: PHP + Apache runtime ─────────────────────────────────────────────
 FROM php:8.3-apache
 
-# Install system deps + PHP extensions required by Laravel
+# System deps + PHP extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libzip-dev \
-        libpng-dev \
-        libonig-dev \
-        libxml2-dev \
-        libicu-dev \
+        libzip-dev libpng-dev libonig-dev libxml2-dev libicu-dev \
         zip unzip curl git \
-    && docker-php-ext-install \
-        pdo \
-        pdo_mysql \
-        mbstring \
-        xml \
-        bcmath \
-        zip \
-        gd \
-        intl \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && docker-php-ext-install pdo pdo_mysql mbstring xml bcmath zip gd intl \
+    && pecl install redis && docker-php-ext-enable redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Configure Apache — point DocumentRoot to Laravel's public/ dir
-RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
-        /etc/apache2/sites-available/000-default.conf \
-        /etc/apache2/apache2.conf \
-    && sed -ri -e 's!^Listen 80$!Listen 8082!' /etc/apache2/ports.conf \
-    && sed -ri -e 's!<VirtualHost \*:80>!<VirtualHost *:8082>!' \
-        /etc/apache2/sites-available/000-default.conf \
-    && a2enmod rewrite headers \
-    && echo "ServerName localhost" >> /etc/apache2/apache2.conf
+# Apache: port 8082, DocumentRoot → public/, mod_rewrite
+RUN sed -i 's/^Listen 80$/Listen 8082/' /etc/apache2/ports.conf \
+    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8082>/' /etc/apache2/sites-available/000-default.conf \
+    && sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf \
+    && echo "ServerName localhost" >> /etc/apache2/apache2.conf \
+    && a2enmod rewrite headers
 
-# Copy application source
 WORKDIR /var/www/html
-COPY . .
 
-# Copy compiled frontend assets from node-builder
+COPY . .
 COPY --from=node-builder /app/public/build ./public/build
 
-# Install PHP dependencies (production only)
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
-
-# Set up storage & bootstrap cache dirs, fix permissions
-RUN mkdir -p storage/framework/{sessions,views,cache} \
-             storage/logs \
-             bootstrap/cache \
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
+    && mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 

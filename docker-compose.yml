@@ -6,31 +6,14 @@ services:
     container_name: eb-ieadao
     restart: unless-stopped
     ports:
-      - "8082:80"
+      - "8082:8082"
+    env_file:
+      - .env
     environment:
-      APP_NAME: "EB IEADAO"
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_URL: http://localhost:8082
-      DB_CONNECTION: mysql
       DB_HOST: db
       DB_PORT: 3306
-      DB_DATABASE: eb_ieadao
-      DB_USERNAME: laravel
-      DB_PASSWORD: secret
-      SESSION_DRIVER: database
-      CACHE_STORE: database
-      QUEUE_CONNECTION: database
-      LOG_CHANNEL: stderr
-      LOG_LEVEL: error
     volumes:
       - storage_data:/var/www/html/storage/app
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8082/ | grep -qE '^[1-4]'"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
     depends_on:
       db:
         condition: service_healthy
@@ -40,10 +23,10 @@ services:
     container_name: eb-ieadao-db
     restart: unless-stopped
     environment:
-      MARIADB_DATABASE: eb_ieadao
-      MARIADB_USER: laravel
-      MARIADB_PASSWORD: secret
-      MARIADB_ROOT_PASSWORD: rootsecret
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
