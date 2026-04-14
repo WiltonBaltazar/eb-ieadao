@@ -40,6 +40,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
         /etc/apache2/sites-available/000-default.conf \
         /etc/apache2/apache2.conf \
+    && sed -ri -e 's!^Listen 80$!Listen 8082!' /etc/apache2/ports.conf \
+    && sed -ri -e 's!<VirtualHost \*:80>!<VirtualHost *:8082>!' \
+        /etc/apache2/sites-available/000-default.conf \
     && a2enmod rewrite headers \
     && echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
@@ -63,7 +66,7 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
 COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 80
+EXPOSE 8082
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["apache2-foreground"]

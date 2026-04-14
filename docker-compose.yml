@@ -26,7 +26,7 @@ services:
     volumes:
       - storage_data:/var/www/html/storage/app
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost/ | grep -qE '^[1-4]'"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8082/ | grep -qE '^[1-4]'"]
       interval: 30s
       timeout: 10s
       retries: 5
