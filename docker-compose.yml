@@ -25,6 +25,12 @@ services:
       LOG_LEVEL: error
     volumes:
       - storage_data:/var/www/html/storage/app
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost/ | grep -qE '^[1-4]'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     depends_on:
       db:
         condition: service_healthy
