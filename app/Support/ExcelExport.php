@@ -14,9 +14,13 @@ class ExcelExport
     public static function download(string $filename, callable $build): BinaryFileResponse
     {
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Arial')->setSize(10);
         $sheet = $spreadsheet->getActiveSheet();
 
         $build($sheet, $spreadsheet);
+
+        // Always open on the first sheet regardless of what the build added
+        $spreadsheet->setActiveSheetIndex(0);
 
         $tmp = tempnam(sys_get_temp_dir(), 'xlsx_') . '.xlsx';
         (new Xlsx($spreadsheet))->save($tmp);
