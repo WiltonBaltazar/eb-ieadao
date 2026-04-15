@@ -47,7 +47,22 @@ class EnrollmentsController extends Controller
             );
         }
 
-        $enrollments = $query->orderByDesc('id')->paginate(50)->withQueryString()->through(fn ($e) => [
+        $sortCol = $request->input('sort', 'student_name');
+        $sortDir = $request->input('dir', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        $sortMap = [
+            'student_name'  => fn ($q) => $q->join('users', 'enrollments.student_id', '=', 'users.id')->orderBy('users.name', $sortDir)->select('enrollments.*'),
+            'classroom_name'=> fn ($q) => $q->join('classrooms', 'enrollments.classroom_id', '=', 'classrooms.id')->orderBy('classrooms.name', $sortDir)->select('enrollments.*'),
+            'enrolled_at'   => fn ($q) => $q->orderBy('enrolled_at', $sortDir),
+        ];
+
+        if (isset($sortMap[$sortCol])) {
+            $query = ($sortMap[$sortCol])($query);
+        } else {
+            $query->orderBy('enrolled_at', 'desc');
+        }
+
+        $enrollments = $query->paginate(50)->withQueryString()->through(fn ($e) => [
             'id'             => $e->id,
             'student_id'     => $e->student_id,
             'student_name'   => $e->student?->name,
@@ -63,7 +78,7 @@ class EnrollmentsController extends Controller
             'year'           => $year,
             'currentYear'    => $currentYear,
             'availableYears' => $availableYears,
-            'filters'        => $request->only(['year', 'classroom_id', 'search']),
+            'filters'        => $request->only(['year', 'classroom_id', 'search', 'sort', 'dir']),
         ]);
     }
 
