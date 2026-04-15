@@ -28,6 +28,23 @@ import {
 import { PageProps, PaginatedData } from '@/types';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
 
+async function dlXlsx(url: string): Promise<void> {
+  const res = await fetch(url, { credentials: 'same-origin' });
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+  const disposition = res.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename[^;=\n]*=(["']?)([^"'\n;]+)\1/);
+  const filename = match?.[2] ?? 'export.xlsx';
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
+
 interface StudentRow {
   id: number;
   name: string;
@@ -140,10 +157,19 @@ export default function TurmaAlunos({
               size="sm"
               variant="outline"
               className="gap-1.5 text-green-700 border-green-300 hover:bg-green-50"
-              onClick={() => { window.location.href = `/admin/relatorios/turma/${classroom.id}/exportar-excel?year=${year}`; }}
+              onClick={() => dlXlsx(`/admin/relatorios/turma/${classroom.id}/exportar-excel?year=${year}`)}
             >
               <FileSpreadsheet className="h-4 w-4" />
               Excel {year}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-50"
+              onClick={() => dlXlsx(`/admin/relatorios/turma/${classroom.id}/exportar-mapa?year=${year}`)}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Exportar Presenças no Formato ICI {year}
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/turmas">
