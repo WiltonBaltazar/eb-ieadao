@@ -158,6 +158,45 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
     }
   };
 
+  // ── Mapa ICI import ──
+  type MapaResult = { students_created: number; students_updated: number; sessions_created: number; attendances_created: number; skipped: number; errors: string[]; error?: string };
+  const [showMapaImport, setShowMapaImport]   = useState(false);
+  const [mapaFile, setMapaFile]               = useState<File | null>(null);
+  const [mapaClassroom, setMapaClassroom]     = useState('');
+  const [mapaImporting, setMapaImporting]     = useState(false);
+  const [mapaResult, setMapaResult]           = useState<MapaResult | null>(null);
+  const mapaInputRef = useRef<HTMLInputElement>(null);
+
+  const openMapaImport = () => {
+    setMapaFile(null);
+    setMapaResult(null);
+    setMapaClassroom('');
+    setShowMapaImport(true);
+    if (mapaInputRef.current) mapaInputRef.current.value = '';
+  };
+
+  const submitMapaImport = () => {
+    if (!mapaFile || !mapaClassroom) return;
+    setMapaImporting(true);
+    setMapaResult(null);
+    const formData = new FormData();
+    formData.append('xlsx', mapaFile);
+    formData.append('classroom_id', mapaClassroom);
+    formData.append('_token', (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '');
+    fetch('/admin/utilizadores/importar-mapa-ici', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+      body: formData,
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        setMapaResult(data);
+        setMapaImporting(false);
+        if (!data.error) router.reload();
+      })
+      .catch(() => setMapaImporting(false));
+  };
+
   // ── XLSX import ──
   const [showImport, setShowImport]         = useState(false);
   const [importFile, setImportFile]         = useState<File | null>(null);
@@ -205,6 +244,10 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-800">Utilizadores</h1>
           <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50" onClick={openMapaImport}>
+              <FileSpreadsheet className="h-4 w-4" />
+              Importar Mapa ICI
+            </Button>
             <Button size="sm" variant="outline" className="gap-1.5 text-indigo-700 border-indigo-300 hover:bg-indigo-50" onClick={openImport}>
               <Upload className="h-4 w-4" />
               Importar XLSX
@@ -531,6 +574,107 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ── Mapa ICI Import Modal ── */}
+      {showMapaImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                Importar Mapa ICI
+              </h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowMapaImport(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-slate-600 space-y-1">
+              <p className="font-medium text-slate-700">Ficheiro ICI — folha "MAPA GERAL"</p>
+              <p>Importa alunos (NOME + contacto), cria aulas com os números dados e regista presenças (P).</p>
+              <p>Login: usa o número WA se disponível, senão o CONTACTO. Alunos já existentes (mesmo número) são actualizados.</p>
+            </div>
+
+            {mapaResult ? (
+              <div className="space-y-3">
+                {mapaResult.error ? (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{mapaResult.error}</AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-center">
+                      <p className="text-2xl font-bold text-green-700">{mapaResult.students_created}</p>
+                      <p className="text-xs text-green-600">alunos criados</p>
+                    </div>
+                    <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-center">
+                      <p className="text-2xl font-bold text-blue-700">{mapaResult.students_updated}</p>
+                      <p className="text-xs text-blue-600">alunos actualizados</p>
+                    </div>
+                    <div className="rounded-lg bg-violet-50 border border-violet-200 p-3 text-center">
+                      <p className="text-2xl font-bold text-violet-700">{mapaResult.sessions_created}</p>
+                      <p className="text-xs text-violet-600">aulas criadas</p>
+                    </div>
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-center">
+                      <p className="text-2xl font-bold text-amber-700">{mapaResult.attendances_created}</p>
+                      <p className="text-xs text-amber-600">presenças registadas</p>
+                    </div>
+                  </div>
+                )}
+                {mapaResult.errors && mapaResult.errors.length > 0 && (
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-1 max-h-40 overflow-y-auto">
+                    <p className="text-xs font-medium text-amber-700">Avisos ({mapaResult.skipped} ignorados):</p>
+                    {mapaResult.errors.map((err, i) => (
+                      <p key={i} className="text-xs text-amber-600">{err}</p>
+                    ))}
+                  </div>
+                )}
+                <Button className="w-full" onClick={() => setShowMapaImport(false)}>Fechar</Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm mb-1.5 block">Turma *</Label>
+                  <Select value={mapaClassroom} onValueChange={setMapaClassroom}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar turma…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classrooms.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm mb-1.5 block">Ficheiro Excel (Mapa ICI) *</Label>
+                  <input
+                    ref={mapaInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    className="block w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-xs file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100"
+                    onChange={(e) => setMapaFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                    disabled={!mapaFile || !mapaClassroom || mapaImporting}
+                    onClick={submitMapaImport}
+                  >
+                    {mapaImporting
+                      ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />A importar…</>
+                      : <><FileSpreadsheet className="h-4 w-4 mr-1.5" />Importar</>
+                    }
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowMapaImport(false)}>Cancelar</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── XLSX Import Modal ── */}
       {showImport && (

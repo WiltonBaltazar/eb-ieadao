@@ -150,15 +150,24 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // Helper to mark attendance
+        // Helper to mark attendance — QR check-ins get a realistic mix of locations
         $attend = function (string $phone, string $date, string $method = 'manual') use ($students, $sessionModels, $teacher) {
             $student = $students[$phone] ?? null;
             $session = $sessionModels[$date] ?? null;
             if (!$student || !$session) return;
+
+            // manual/auto = always na_igreja; qr = ~40 % online (deterministic via hash)
+            if ($method === 'qr' && abs(crc32($phone . $date . 'loc')) % 5 < 2) {
+                $location = 'online';
+            } else {
+                $location = 'na_igreja';
+            }
+
             Attendance::updateOrCreate(
                 ['study_session_id' => $session->id, 'student_id' => $student->id],
                 [
                     'check_in_method' => $method,
+                    'location'        => $location,
                     'marked_by_id'    => $method === 'manual' ? $teacher->id : null,
                     'checked_in_at'   => Carbon::parse($date)->setTime(9, rand(30, 55), rand(0, 59)),
                 ]
@@ -224,12 +233,14 @@ class DatabaseSeeder extends Seeder
         foreach ($cohortCDates as $d) { $attend('911000020', $d, 'qr'); }
         //  Tiago   2/4 = 50 %  — misses sessions 11 & 12
         foreach (['2026-03-08','2026-03-29'] as $d) { $attend('911000021', $d, 'manual'); }
-        //  Catarina 3/4 = 75 % — misses session 10
-        foreach (['2026-03-15','2026-03-22','2026-03-29'] as $d) { $attend('911000022', $d, 'qr'); }
+        //  Catarina 3/4 = 75 % — attends first, misses last
+        foreach (['2026-03-08','2026-03-15','2026-03-22'] as $d) { $attend('911000022', $d, 'qr'); }
 
         // ── Cohort D attendance (enrolled 2026-03-22, sessions 12-13 eligible) ──
         // The most obvious proof: only 2 sessions should count, not 13
-        //  Rodrigo  0/2 =   0 %  — attended nothing yet
+        //  Rodrigo  1/2 =  50 %  — attends first session, misses second
+        //  Rodrigo  1/2 =  50 %  — attends first, misses second
+        $attend('911000023', '2026-03-22', 'manual');
         //  Inês     1/2 =  50 %  — attended session 12 only
         $attend('911000024', '2026-03-22', 'manual');
         //  André    2/2 = 100 %  — attended both sessions
