@@ -50,10 +50,10 @@ class CheckInController extends Controller
         $request->validate([
             'phone' => 'required|string',
             'code' => 'required|string',
-            'location' => ['required', 'in:na_igreja,online'],
+            'location' => ['nullable', 'in:na_igreja,online'],
         ]);
 
-        $location = AttendanceLocation::from($request->location);
+        $location = AttendanceLocation::from($request->location ?? 'na_igreja');
 
         try {
             $this->attendanceService->phoneCheckIn(

@@ -68,7 +68,7 @@ class AttendanceService
         return $session->fresh();
     }
 
-    public function phoneCheckIn(string $phone, int|StudySession $session, string $code, AttendanceLocation $location): Attendance
+    public function phoneCheckIn(string $phone, int|StudySession $session, string $code, AttendanceLocation $location = AttendanceLocation::NaIgreja): Attendance
     {
         if (!$session instanceof StudySession) {
             $session = StudySession::findOrFail($session);
