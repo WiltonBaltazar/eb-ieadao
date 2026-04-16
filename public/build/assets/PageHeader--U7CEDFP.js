@@ -1,0 +1,1 @@
+import{j as e}from"./app-BZT4CBD-.js";function r({title:t,subtitle:s,action:x}){return e.jsxs("div",{className:"flex items-center justify-between",children:[e.jsxs("div",{children:[e.jsx("h1",{className:"text-2xl font-bold text-slate-800",children:t}),s&&e.jsx("p",{className:"text-sm text-slate-500 mt-0.5",children:s})]}),x]})}export{r as P};
