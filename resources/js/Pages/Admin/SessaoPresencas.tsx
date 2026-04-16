@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { grupoColors, statusColors } from '@/lib/constants';
 import { FormEventHandler, useState, useMemo, useRef } from 'react';
 import { useBulkSelect } from '@/hooks/useBulkSelect';
 import BulkActionBar from '@/Components/BulkActionBar';
@@ -83,18 +84,6 @@ interface Props extends PageProps {
   filters: { search?: string; grupo_homogeneo?: string; sort_by?: string; sort_dir?: string; per_page?: string };
 }
 
-const statusColors: Record<string, string> = {
-  open: 'bg-green-100 text-green-800',
-  closed: 'bg-slate-100 text-slate-600',
-  draft: 'bg-yellow-100 text-yellow-800',
-};
-
-const grupoColors: Record<string, string> = {
-  homens: 'bg-indigo-100 text-indigo-700',
-  senhoras: 'bg-pink-100 text-pink-700',
-  jovens: 'bg-amber-100 text-amber-700',
-  criancas: 'bg-teal-100 text-teal-700',
-};
 
 export default function SessaoPresencas({
   studySession,

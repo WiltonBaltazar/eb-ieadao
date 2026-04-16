@@ -23,10 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/Components/ui/select';
-import { Plus, Pencil, Trash2, Users, Search, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Archive, ArchiveRestore } from 'lucide-react';
 import { PageProps, PaginatedData, Classroom } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
+import PageHeader from '@/Components/PageHeader';
+import SearchInput from '@/Components/SearchInput';
 
 interface ClassroomRow extends Classroom {
   teacher_ids: number[];
@@ -214,35 +216,31 @@ export default function Turmas({ classrooms, teachers, filters, errors }: Props)
       <FlashMessage />
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">Turmas</h1>
-          <Dialog open={showCreate} onOpenChange={setShowCreate}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="h-4 w-4 mr-2" />Nova Turma</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>Nova Turma</DialogTitle></DialogHeader>
-              <ClassroomForm form={createForm} onSubmit={handleCreate} submitLabel="Criar Turma" teachers={teachers} />
-            </DialogContent>
-          </Dialog>
-        </div>
+        <PageHeader
+          title="Turmas"
+          action={
+            <Dialog open={showCreate} onOpenChange={setShowCreate}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="h-4 w-4 mr-2" />Nova Turma</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Nova Turma</DialogTitle></DialogHeader>
+                <ClassroomForm form={createForm} onSubmit={handleCreate} submitLabel="Criar Turma" teachers={teachers} />
+              </DialogContent>
+            </Dialog>
+          }
+        />
 
         {/* Filters */}
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="flex flex-wrap gap-3">
-              <div className="flex gap-2 flex-1 min-w-[12rem]">
-                <Input
-                  placeholder="Pesquisar turma…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="h-8"
-                />
-                <Button size="sm" variant="outline" onClick={handleSearch} className="h-8">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                onSearch={handleSearch}
+                placeholder="Pesquisar turma…"
+              />
               <Select value={filters.status ?? 'all'} onValueChange={(v) => handleFilter('status', v === 'all' ? '' : v)}>
                 <SelectTrigger className="h-8 w-36"><SelectValue placeholder="Estado" /></SelectTrigger>
                 <SelectContent>

@@ -18,6 +18,8 @@ import { Plus, QrCode, Play, Square, RefreshCw, Trash2, Users, Pencil, RotateCcw
 import { PageProps, PaginatedData, StudySession } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
+import PageHeader from '@/Components/PageHeader';
+import { statusColors } from '@/lib/constants';
 
 interface ClassroomOption {
   id: number;
@@ -36,12 +38,6 @@ interface Props extends PageProps {
   teachers: TeacherOption[];
   filters: Record<string, string>;
 }
-
-const statusColors: Record<string, string> = {
-  open: 'bg-green-100 text-green-800',
-  closed: 'bg-slate-100 text-slate-600',
-  draft: 'bg-yellow-100 text-yellow-800',
-};
 
 // ── Searchable select ──────────────────────────────────────────────────────────
 function SearchableSelect({
@@ -234,12 +230,14 @@ export default function Sessoes({ sessions, classrooms, teachers, filters }: Pro
       <FlashMessage />
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">Aulas</h1>
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-2" />Nova Aula
-          </Button>
-        </div>
+        <PageHeader
+          title="Aulas"
+          action={
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4 mr-2" />Nova Aula
+            </Button>
+          }
+        />
 
         {/* Filters */}
         <div className="flex flex-wrap gap-2 items-center">
