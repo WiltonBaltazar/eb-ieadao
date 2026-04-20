@@ -75,7 +75,8 @@ class AttendanceService
         }
 
         // 1. Phone must be registered
-        $student = User::where('phone', $phone)
+        $altPhone = str_starts_with($phone, '+') ? ltrim($phone, '+') : '+' . $phone;
+        $student = User::whereIn('phone', [$phone, $altPhone])
             ->whereIn('role', ['student', 'teacher'])
             ->first();
 

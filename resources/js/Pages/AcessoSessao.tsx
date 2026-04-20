@@ -188,20 +188,15 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
                   <label htmlFor="phone" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Telefone
                   </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
-                      +258
-                    </span>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="8XXXXXXXX"
-                      value={data.phone}
-                      onChange={(e) => setData('phone', e.target.value)}
-                      autoFocus={!auth_phone}
-                      className="pl-14 h-11 rounded-xl border-slate-200 focus:border-brand-accent focus:ring-brand-accent/20"
-                    />
-                  </div>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="Ex: 841234567 ou +44123456789"
+                    value={data.phone}
+                    onChange={(e) => setData('phone', e.target.value)}
+                    autoFocus={!auth_phone}
+                    className="h-11 rounded-xl border-slate-200 focus:border-brand-accent focus:ring-brand-accent/20"
+                  />
                 </div>
 
 

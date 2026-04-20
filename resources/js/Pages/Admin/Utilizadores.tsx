@@ -27,6 +27,9 @@ import { Plus, Search, Trash2, AlertCircle, Eye, Pencil, Upload, FileSpreadsheet
 import { PageProps, PaginatedData } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
+import PageHeader from '@/Components/PageHeader';
+import SearchInput from '@/Components/SearchInput';
+import { grupoColors } from '@/lib/constants';
 
 interface UserRow {
   id: number;
@@ -241,16 +244,15 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
       <FlashMessage />
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">Utilizadores</h1>
+        <PageHeader
+          title="Utilizadores"
+          action={
           <div className="flex gap-2">
             <Button size="sm" variant="outline" className="gap-1.5 text-emerald-700 border-emerald-300 hover:bg-emerald-50" onClick={openMapaImport}>
-              <FileSpreadsheet className="h-4 w-4" />
-              Importar Mapa ICI
+              <FileSpreadsheet className="h-4 w-4" />Importar Mapa ICI
             </Button>
             <Button size="sm" variant="outline" className="gap-1.5 text-indigo-700 border-indigo-300 hover:bg-indigo-50" onClick={openImport}>
-              <Upload className="h-4 w-4" />
-              Importar XLSX
+              <Upload className="h-4 w-4" />Importar XLSX
             </Button>
             <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
@@ -339,24 +341,18 @@ export default function Utilizadores({ users, classrooms, roles, gruposOptions, 
             </DialogContent>
           </Dialog>
           </div>
-        </div>
+          }
+        />
 
         {/* Filters */}
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="flex flex-wrap gap-3">
-              <div className="flex gap-2 flex-1 min-w-[12rem]">
-                <Input
-                  placeholder="Pesquisar…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="h-8"
-                />
-                <Button size="sm" variant="outline" onClick={handleSearch} className="h-8">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                onSearch={handleSearch}
+              />
               <Select value={filters.role ?? 'all'} onValueChange={(v) => handleFilter('role', v === 'all' ? '' : v)}>
                 <SelectTrigger className="h-8 w-36"><SelectValue placeholder="Todos os papéis" /></SelectTrigger>
                 <SelectContent>

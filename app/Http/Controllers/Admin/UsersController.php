@@ -344,14 +344,16 @@ class UsersController extends Controller
             $rowNum = $i + 2;
             $name   = trim((string) ($line[$nameIdx] ?? ''));
             $phone  = trim((string) ($line[$phoneIdx] ?? ''));
+            if ($phone === '?') $phone = '';
 
             if ($name === '' && $phone === '') continue;
 
             if ($name === '') { $errors[] = "Linha {$rowNum}: nome em falta."; continue; }
-            if ($phone === '') { $errors[] = "Linha {$rowNum}: telefone em falta."; continue; }
+
+            $phone = $phone !== '' ? $phone : null;
 
             // Skip if phone already registered
-            if (User::where('phone', $phone)->exists()) {
+            if ($phone !== null && User::where('phone', $phone)->exists()) {
                 $skipped++;
                 continue;
             }
@@ -363,7 +365,7 @@ class UsersController extends Controller
             $student = User::create([
                 'name'            => $name,
                 'phone'           => $phone,
-                'whatsapp'        => $phone,
+                'whatsapp'        => null,
                 'role'            => 'student',
                 'grupo_homogeneo' => $grupo,
                 'classroom_id'    => $classroom->id,
@@ -490,14 +492,6 @@ class UsersController extends Controller
         $skipped            = 0;
         $errors             = [];
 
-        // Seed placeholder counter from the highest existing placeholder phone
-        $lastPlaceholder = User::where('phone', 'like', '880000000%')
-            ->orderByDesc('phone')
-            ->value('phone');
-        $placeholderCounter = $lastPlaceholder
-            ? ((int) substr($lastPlaceholder, 9)) + 1
-            : 1;
-
         foreach ($studentRows as $i => $row) {
             $rowNum = $i + 11;
 
@@ -513,20 +507,14 @@ class UsersController extends Controller
             // Prefer WA (col 3) over CONTACTO (col 2)
             $rawWa       = trim((string)($row[3] ?? ''));
             $rawPhone    = trim((string)($row[2] ?? ''));
+            if ($rawWa === '?') $rawWa = '';
+            if ($rawPhone === '?') $rawPhone = '';
             $waDigits    = preg_replace('/\D/', '', $rawWa);
             $phoneDigits = preg_replace('/\D/', '', $rawPhone);
 
-            $phone    = $waDigits !== '' ? $waDigits : $phoneDigits;
+            $phoneRaw = $waDigits !== '' ? $waDigits : $phoneDigits;
+            $phone    = ($phoneRaw !== '' && strlen($phoneRaw) >= 5) ? $phoneRaw : null;
             $whatsapp = $waDigits !== '' ? $waDigits : null;
-
-            // No contact: assign placeholder (can be updated later)
-            if ($phone === '' || strlen($phone) < 5) {
-                do {
-                    $candidate = '880000000' . $placeholderCounter++;
-                } while (User::where('phone', $candidate)->exists());
-                $phone    = $candidate;
-                $whatsapp = null;
-            }
 
             $ghCode = strtoupper(trim((string)($row[5] ?? '')));
             $grupo  = $ghMap[$ghCode] ?? null;
@@ -548,7 +536,7 @@ class UsersController extends Controller
             }
             $enrolledAt = $firstPDate ?? now();
 
-            $existing = User::where('phone', $phone)->first();
+            $existing = $phone !== null ? User::where('phone', $phone)->first() : null;
 
             if ($existing) {
                 $existing->update([

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { grupoColors } from '@/lib/constants';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Badge } from '@/Components/ui/badge';
@@ -69,12 +70,6 @@ interface Props extends PageProps {
   selectedYear: number;
 }
 
-const grupoColors: Record<string, string> = {
-  homens: 'bg-indigo-100 text-indigo-700',
-  senhoras: 'bg-pink-100 text-pink-700',
-  jovens: 'bg-amber-100 text-amber-700',
-  criancas: 'bg-teal-100 text-teal-700',
-};
 
 const readinessColors: Record<string, string> = {
   no_classroom: 'bg-slate-100 text-slate-500',

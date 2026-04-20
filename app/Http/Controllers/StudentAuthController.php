@@ -20,7 +20,10 @@ class StudentAuthController extends Controller
     {
         $request->validate(['phone' => 'required|string']);
 
-        $user = User::where('phone', $request->phone)
+        $phone = trim($request->phone);
+        $altPhone = str_starts_with($phone, '+') ? ltrim($phone, '+') : '+' . $phone;
+
+        $user = User::whereIn('phone', [$phone, $altPhone])
             ->whereIn('role', ['student', 'teacher'])
             ->first();
 

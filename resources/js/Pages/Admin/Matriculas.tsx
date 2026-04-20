@@ -19,10 +19,12 @@ import {
   DialogTitle,
 } from '@/Components/ui/dialog';
 import { Label } from '@/Components/ui/label';
-import { Search, Copy, X, CalendarPlus, ArrowRight, Trash2 } from 'lucide-react';
+import { Copy, X, CalendarPlus, ArrowRight, Trash2 } from 'lucide-react';
 import { PageProps, PaginatedData } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
+import PageHeader from '@/Components/PageHeader';
+import SearchInput from '@/Components/SearchInput';
 
 interface EnrollmentRow {
   id: number;
@@ -104,21 +106,21 @@ export default function Matriculas({ enrollments, classrooms, year, currentYear,
       <FlashMessage />
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-slate-800">Matrículas</h1>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyDialogOpen(true)}>
-              <Copy className="h-4 w-4" />
-              Copiar entre anos
-            </Button>
-            {enrollments.total > 0 && (
-              <Button size="sm" variant="outline" className="gap-1.5 text-red-600 hover:text-red-700 hover:border-red-300" onClick={() => setClearYearDialogOpen(true)}>
-                <Trash2 className="h-4 w-4" />
-                Apagar {year}
+        <PageHeader
+          title="Matrículas"
+          action={
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyDialogOpen(true)}>
+                <Copy className="h-4 w-4" />Copiar entre anos
               </Button>
-            )}
-          </div>
-        </div>
+              {enrollments.total > 0 && (
+                <Button size="sm" variant="outline" className="gap-1.5 text-red-600 hover:text-red-700 hover:border-red-300" onClick={() => setClearYearDialogOpen(true)}>
+                  <Trash2 className="h-4 w-4" />Apagar {year}
+                </Button>
+              )}
+            </div>
+          }
+        />
 
         {/* Start new year banner */}
         {showStartBanner && (
@@ -177,18 +179,12 @@ export default function Matriculas({ enrollments, classrooms, year, currentYear,
                 </SelectContent>
               </Select>
 
-              <div className="flex gap-2 flex-1 min-w-[12rem]">
-                <Input
-                  placeholder="Pesquisar aluno…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="h-8"
-                />
-                <Button size="sm" variant="outline" onClick={handleSearch} className="h-8">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                onSearch={handleSearch}
+                placeholder="Pesquisar aluno…"
+              />
 
               {hasFilters && (
                 <Button size="sm" variant="ghost" className="h-8 text-slate-500" onClick={clearFilters}>
