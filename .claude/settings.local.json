@@ -16,7 +16,8 @@
       "Bash(npm install:*)",
       "Bash(node -e \"const d = require\\(''/Users/macbookpro/.nvm/versions/node/v20.17.0/lib/node_modules/docx''\\); console.log\\(''ok''\\)\")",
       "Bash(node /Users/macbookpro/Sites/claude/eb-ieadao/make-manual.js)",
-      "Bash(node /Users/macbookpro/Sites/claude/eb-ieadao/make-manual.cjs)"
+      "Bash(node /Users/macbookpro/Sites/claude/eb-ieadao/make-manual.cjs)",
+      "Bash(npm run *)"
     ]
   }
 }
