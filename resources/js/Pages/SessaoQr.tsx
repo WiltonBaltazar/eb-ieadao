@@ -1,7 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/Components/ui/button';
-import { RefreshCw, QrCode as QrIcon, Clock } from 'lucide-react';
+import { RefreshCw, QrCode as QrIcon, Clock, Copy, Check } from 'lucide-react';
 import { PageProps } from '@/types';
 
 interface Props extends PageProps {
@@ -22,6 +22,13 @@ interface Props extends PageProps {
 export default function SessaoQr({ studySession, qrSvg, checkInUrl, canManage }: Props) {
   const [timeLeft, setTimeLeft] = useState('');
   const [expired, setExpired] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(checkInUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     if (!studySession.check_in_code_expires_at) return;
@@ -108,7 +115,23 @@ export default function SessaoQr({ studySession, qrSvg, checkInUrl, canManage }:
           </div>
         )}
 
-        <p className="text-xs text-slate-600 break-all">{checkInUrl}</p>
+        <div className="flex items-center justify-center gap-2">
+          <a
+            href={checkInUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-slate-400 hover:text-white underline underline-offset-2 break-all transition-colors"
+          >
+            {checkInUrl}
+          </a>
+          <button
+            onClick={handleCopy}
+            className="shrink-0 text-slate-500 hover:text-white transition-colors"
+            title="Copiar link"
+          >
+            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
     </div>
   );
