@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libzip-dev \
         nginx \
         unzip \
+        wget \
         zip \
     && rm -rf /var/lib/apt/lists/*
 
