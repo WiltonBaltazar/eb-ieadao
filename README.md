@@ -41,6 +41,18 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## Deploy
+
+Production deployments for Coolify use the Dockerfile in the repo root.
+
+- Container port: `8086`
+- Coolify should be configured to expose `8086`
+- The app serves Laravel through nginx + PHP-FPM in the Docker image
+- Keep your normal Laravel environment variables in Coolify
+- If you need persistent uploads, mount a volume for `storage`
+
+For local Docker checks, build from the repo root with `docker build .`.
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
