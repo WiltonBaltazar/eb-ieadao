@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AttendanceLocation;
 use App\Enums\CheckInMethod;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,12 +14,13 @@ class Attendance extends Model
 
     protected $fillable = [
         'study_session_id', 'student_id', 'marked_by_id',
-        'check_in_method', 'checked_in_at',
+        'check_in_method', 'location', 'checked_in_at',
     ];
 
     protected $casts = [
         'checked_in_at' => 'datetime',
         'check_in_method' => CheckInMethod::class,
+        'location' => AttendanceLocation::class,
     ];
 
     public function session(): BelongsTo

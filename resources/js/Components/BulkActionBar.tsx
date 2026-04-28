@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { Button } from '@/Components/ui/button';
 import {
   Dialog,
@@ -15,9 +15,10 @@ interface Props {
   onConfirmDelete: () => void;
   onClear: () => void;
   onSelectAll: () => void;
+  extraActions?: ReactNode;
 }
 
-export default function BulkActionBar({ selectedCount, totalOnPage, label, onConfirmDelete, onClear, onSelectAll }: Props) {
+export default function BulkActionBar({ selectedCount, totalOnPage, label, onConfirmDelete, onClear, onSelectAll, extraActions }: Props) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   if (selectedCount === 0) return null;
@@ -44,6 +45,7 @@ export default function BulkActionBar({ selectedCount, totalOnPage, label, onCon
         >
           Limpar seleção
         </Button>
+        {extraActions}
         <Button
           size="sm"
           variant="ghost"

@@ -3,7 +3,7 @@ import { FormEventHandler, useEffect, useState } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
-import { AlertCircle, CheckCircle2, Building2, Calendar, Clock, Phone } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Building2, Calendar, Clock, Phone, Wifi, Church } from 'lucide-react';
 import { AcessoSessaoPageProps, PageProps } from '@/types';
 
 function CountdownBadge({ expiresAt }: { expiresAt: string }) {
@@ -31,11 +31,10 @@ function CountdownBadge({ expiresAt }: { expiresAt: string }) {
   if (!timeLeft) return null;
 
   return (
-    <div className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold tabular-nums ${
-      urgent
+    <div className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold tabular-nums ${urgent
         ? 'bg-red-50 border border-red-200 text-red-700'
         : 'bg-amber-50 border border-amber-200 text-amber-700'
-    }`}>
+      }`}>
       <Clock className="h-4 w-4" />
       Expira em <span className="text-lg font-bold">{timeLeft}</span>
     </div>
@@ -48,6 +47,7 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
   const { data, setData, post, processing } = useForm({
     phone: auth_phone ?? '',
     code: session.check_in_code ?? '',
+    location: '' as '' | 'na_igreja' | 'online',
   });
 
   const handleSubmit: FormEventHandler = (e) => {
@@ -56,9 +56,9 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
   };
 
   const statusConfig: Record<string, { label: string; bg: string; dot: string }> = {
-    open:   { label: 'Aberta', bg: 'bg-green-100 text-green-800', dot: 'bg-green-500' },
+    open: { label: 'Aberta', bg: 'bg-green-100 text-green-800', dot: 'bg-green-500' },
     closed: { label: 'Encerrada', bg: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' },
-    draft:  { label: 'Rascunho', bg: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
+    draft: { label: 'Rascunho', bg: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
   };
   const status = statusConfig[session.status] ?? statusConfig.closed;
 
@@ -150,35 +150,60 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
                 </p>
               ) : (
                 <p className="text-sm text-slate-400 text-center mt-1 mb-5">
-                  Introduz o teu número de telefone
+                  Por favor, marca a forma como participou da aula e insira o seu número de telefone para confirmar a presença.
                 </p>
               )}
+              <div className="space-y-1.5 mb-4">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Como participou da aula?
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: 'na_igreja', label: 'Na igreja', Icon: Church },
+                    { value: 'online', label: 'Online', Icon: Wifi },
+                  ] as const).map(({ value, label, Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setData('location', value)}
+                      className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${data.location === value
+                          ? 'border-brand-accent bg-brand-accent/5 text-brand-accent'
+                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                        }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {errors.location && (
+                  <p className="text-xs text-red-600">{errors.location}</p>
+                )}
+              </div>
+
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
                   <label htmlFor="phone" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Telefone
                   </label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
-                      +258
-                    </span>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="8XXXXXXXX"
-                      value={data.phone}
-                      onChange={(e) => setData('phone', e.target.value)}
-                      autoFocus={!auth_phone}
-                      className="pl-14 h-11 rounded-xl border-slate-200 focus:border-brand-accent focus:ring-brand-accent/20"
-                    />
-                  </div>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="Ex: 841234567 ou +44123456789"
+                    value={data.phone}
+                    onChange={(e) => setData('phone', e.target.value)}
+                    autoFocus={!auth_phone}
+                    className="h-11 rounded-xl border-slate-200 focus:border-brand-accent focus:ring-brand-accent/20"
+                  />
                 </div>
+
 
                 <Button
                   type="submit"
-                  disabled={processing}
-                  className="w-full h-11 rounded-xl bg-brand-accent hover:bg-brand-accent/90 text-white font-semibold shadow-lg shadow-brand-accent/25"
+                  disabled={processing || !data.location}
+                  className="w-full h-11 rounded-xl bg-brand-accent hover:bg-brand-accent/90 text-white font-semibold shadow-lg shadow-brand-accent/25 disabled:opacity-50"
                 >
                   {processing ? (
                     <span className="flex items-center gap-2">

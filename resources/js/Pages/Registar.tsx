@@ -84,7 +84,7 @@ export default function Registar({
                   type="tel"
                   value={data.phone}
                   onChange={(e) => setData('phone', e.target.value)}
-                  placeholder="840000000"
+                  placeholder="Ex: 841234567 ou +44123456789"
                   className={errors?.phone ? 'border-red-500' : ''}
                 />
                 {errors?.phone && <p className="text-xs text-red-600">{errors.phone}</p>}

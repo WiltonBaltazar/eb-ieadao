@@ -134,6 +134,17 @@ class User extends Authenticatable
 
         $fromDate = $enrollment?->enrolled_at;
 
+        // If no enrollment date, use the date of the first session attended this year
+        if (!$fromDate) {
+            $firstAttended = $this->attendances()
+                ->join('study_sessions', 'attendances.study_session_id', '=', 'study_sessions.id')
+                ->where('study_sessions.classroom_id', $this->classroom_id)
+                ->whereYear('study_sessions.session_date', $year)
+                ->min('study_sessions.session_date');
+
+            $fromDate = $firstAttended ? \Carbon\Carbon::parse($firstAttended) : null;
+        }
+
         $requiredIds = StudySession::where('classroom_id', $this->classroom_id)
             ->whereIn('status', ['open', 'closed'])
             ->whereYear('session_date', $year)
@@ -148,8 +159,11 @@ class User extends Authenticatable
 
         $total = $requiredIds->count();
 
+        $missed = $total - $attended;
+
         return [
             'attended' => $attended,
+            'missed'   => $missed,
             'total'    => $total,
             'rate'     => $total > 0 ? round(($attended / $total) * 100) : 0,
         ];

@@ -52,7 +52,7 @@ class DashboardController extends Controller
             $q->whereBetween('session_date', [$lastMonthStart, $lastMonthEnd])
         )->count();
 
-        $monthTrend = $lastMonthAttendances > 0
+$monthTrend = $lastMonthAttendances > 0
             ? round((($thisMonthAttendances - $lastMonthAttendances) / $lastMonthAttendances) * 100)
             : ($thisMonthAttendances > 0 ? 100 : 0);
 

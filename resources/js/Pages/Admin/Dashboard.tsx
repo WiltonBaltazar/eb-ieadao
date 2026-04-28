@@ -4,9 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Progress } from '@/Components/ui/progress';
 import { Users, BookOpen, CalendarDays, Activity, TrendingUp, TrendingDown, Percent } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { PageProps } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
+import KpiCard from '@/Components/KpiCard';
+import PageHeader from '@/Components/PageHeader';
+import { statusColors } from '@/lib/constants';
 
 interface DashboardProps extends PageProps {
   stats: {
@@ -49,12 +52,6 @@ interface DashboardProps extends PageProps {
   }>;
 }
 
-const statusColors: Record<string, string> = {
-  open: 'bg-green-100 text-green-800',
-  closed: 'bg-slate-100 text-slate-600',
-  draft: 'bg-yellow-100 text-yellow-800',
-};
-
 const PIE_COLORS = ['#1A1D6B', '#FF6700', '#F9AF0B', '#10b981', '#8b5cf6', '#06b6d4'];
 
 export default function Dashboard({
@@ -73,82 +70,15 @@ export default function Dashboard({
       <FlashMessage />
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Visão geral da atividade do sistema</p>
-        </div>
+        <PageHeader title="Dashboard" subtitle="Visão geral da atividade do sistema" />
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-brand-primary overflow-hidden">
-            <CardContent className="pt-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Estudantes</p>
-                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-slate-800">{stats.total_students}</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-brand-primary flex items-center justify-center shrink-0">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-brand-accent overflow-hidden">
-            <CardContent className="pt-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Turmas Ativas</p>
-                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-slate-800">{stats.total_classrooms}</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-brand-accent flex items-center justify-center shrink-0">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-brand-yellow overflow-hidden">
-            <CardContent className="pt-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Sessões</p>
-                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-slate-800">{stats.total_sessions}</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-brand-yellow flex items-center justify-center shrink-0">
-                  <CalendarDays className="h-5 w-5 text-slate-800" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-green-500 overflow-hidden">
-            <CardContent className="pt-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Abertas Agora</p>
-                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-green-600">{stats.open_sessions}</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-green-500 flex items-center justify-center shrink-0">
-                  <Activity className="h-5 w-5 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md border border-slate-200/70 border-t-[3px] border-t-slate-400 overflow-hidden">
-            <CardContent className="pt-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Assiduidade</p>
-                  <p className="text-3xl font-bold mt-1.5 tracking-tight text-slate-800">{stats.avg_attendance}%</p>
-                </div>
-                <div className="h-10 w-10 rounded-lg bg-slate-500 flex items-center justify-center shrink-0">
-                  <Percent className="h-5 w-5 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard label="Estudantes"   value={stats.total_students}   icon={Users}       color="brand-primary" />
+          <KpiCard label="Turmas Ativas" value={stats.total_classrooms} icon={BookOpen}    color="brand-accent" />
+          <KpiCard label="Sessões"      value={stats.total_sessions}   icon={CalendarDays} color="brand-yellow" iconColor="text-slate-800" />
+          <KpiCard label="Abertas Agora" value={stats.open_sessions}   icon={Activity}    color="green-500" valueColor="text-green-600" />
+          <KpiCard label="Assiduidade"  value={`${stats.avg_attendance}%`} icon={Percent} color="slate-500" />
         </div>
 
         {/* Month trend card */}

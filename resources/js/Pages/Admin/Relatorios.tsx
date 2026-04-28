@@ -31,6 +31,8 @@ interface ChartPoint {
   date: string;
   label: string;
   count: number;
+  na_igreja: number;
+  online: number;
 }
 
 interface Props extends PageProps {
@@ -40,6 +42,7 @@ interface Props extends PageProps {
     phone: string;
     classroom_name: string;
     attended: number;
+    missed: number;
     total: number;
     rate: number;
   }>;
@@ -55,6 +58,26 @@ function defaultRange(): { from: string; to: string } {
   return { from, to };
 }
 
+/** Download an xlsx file via fetch+blob so the page never navigates. */
+async function dlXlsx(url: string): Promise<void> {
+  const res = await fetch(url, { credentials: 'same-origin' });
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+
+  const disposition = res.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename[^;=\n]*=(["']?)([^"'\n;]+)\1/);
+  const filename = match?.[2] ?? 'export.xlsx';
+
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
+
 export default function Relatorios({ belowThreshold, threshold, classrooms, availableYears }: Props) {
   const defaults = defaultRange();
   const [from, setFrom] = useState(defaults.from);
@@ -62,6 +85,19 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
   const [classroomId, setClassroomId] = useState('all');
   const [exportYear, setExportYear] = useState<string>(
     availableYears.length > 0 ? String(availableYears[0]) : 'all'
+  );
+  const [mapaClassroom, setMapaClassroom] = useState<string>(
+    classrooms.length > 0 ? String(classrooms[0].id) : ''
+  );
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = (url: string) => {
+    if (downloading) return;
+    setDownloading(true);
+    dlXlsx(url).finally(() => setDownloading(false));
+  };
+  const [mapaYear, setMapaYear] = useState<string>(
+    availableYears.length > 0 ? String(availableYears[0]) : String(new Date().getFullYear())
   );
   const [compare, setCompare] = useState(false);
   const [chartData, setChartData] = useState<Array<Record<string, unknown>>>([]);
@@ -92,11 +128,13 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
             row['Período anterior'] = prev.count;
             row['prevLabel'] = prev.label;
           }
-          row['Presenças'] = point.count;
+          row['Na Igreja'] = point.na_igreja;
+          row['Online'] = point.online;
           return row;
         })
         .filter((row) =>
-          (row['Presenças'] as number) > 0 || (row['Período anterior'] as number) > 0
+          (Number(row['Na Igreja'] ?? 0) + Number(row['Online'] ?? 0)) > 0 ||
+          Number(row['Período anterior'] ?? 0) > 0
         );
 
       setChartData(merged);
@@ -135,15 +173,15 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
       <div className="space-y-4">
         <h1 className="text-2xl font-bold text-slate-800">Relatórios</h1>
 
-        <Tabs defaultValue="visao-geral">
+        <Tabs defaultValue="presencas">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
+            <TabsTrigger value="presencas">Presenças</TabsTrigger>
             <TabsTrigger value="registos">Registos</TabsTrigger>
             <TabsTrigger value="acompanhamento">Acompanhamento</TabsTrigger>
           </TabsList>
 
-          {/* Visão Geral */}
-          <TabsContent value="visao-geral" className="space-y-4">
+          {/* Presenças */}
+          <TabsContent value="presencas" className="space-y-4">
             <Card>
               <CardContent className="pt-4 pb-3">
                 <div className="flex flex-wrap gap-3 items-end">
@@ -188,7 +226,7 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                       onClick={() => {
                         const params = new URLSearchParams({ from, to });
                         if (classroomId !== 'all') params.set('classroom_id', classroomId);
-                        window.location.href = `/admin/relatorios/periodo/exportar-excel?${params}`;
+                        handleDownload(`/admin/relatorios/periodo/exportar-excel?${params}`);
                       }}
                     >
                       <Download className="h-3.5 w-3.5 mr-1.5" />
@@ -201,7 +239,7 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                       onClick={() => {
                         const params = new URLSearchParams({ from, to });
                         if (classroomId !== 'all') params.set('classroom_id', classroomId);
-                        window.location.href = `/admin/relatorios/periodo/exportar-excel-alunos?${params}`;
+                        handleDownload(`/admin/relatorios/periodo/exportar-excel-alunos?${params}`);
                       }}
                     >
                       <Download className="h-3.5 w-3.5 mr-1.5" />
@@ -209,6 +247,54 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                     </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Ficha ICI */}
+            <Card className="border-blue-200/60">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Presenças Formato ICI</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Turma</Label>
+                    <Select value={mapaClassroom} onValueChange={setMapaClassroom}>
+                      <SelectTrigger className="h-8 w-52"><SelectValue placeholder="Selecionar turma" /></SelectTrigger>
+                      <SelectContent>
+                        {classrooms.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name}{!c.is_active ? ' (inativa)' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Ano</Label>
+                    <Select value={mapaYear} onValueChange={setMapaYear}>
+                      <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {availableYears.map((y) => (
+                          <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-blue-700 border-blue-300 hover:bg-blue-50 gap-1.5"
+                    disabled={!mapaClassroom}
+                    onClick={() => handleDownload(`/admin/relatorios/turma/${mapaClassroom}/exportar-mapa?year=${mapaYear}`)}
+                  >
+                    <Download className="h-4 w-4" />
+                    Exportar Presenças no Formato ICI
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">
+                  Gera a ficha MAPA GERAL de presenças no formato ICI — P (presença) / F (falta) por aula de terça-feira.
+                </p>
               </CardContent>
             </Card>
 
@@ -243,16 +329,19 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                         labelFormatter={(_label, payload) => {
                           if (!payload?.[0]) return '';
                           const p = payload[0].payload;
-                          const parts = [`Data: ${p.label}`];
+                          const church = Number(p['Na Igreja'] ?? 0);
+                          const online = Number(p['Online'] ?? 0);
+                          const parts = [`${p.label}  —  Total: ${church + online}`];
                           if (p.prevLabel) parts.push(`Anterior: ${p.prevLabel}`);
                           return parts.join(' | ');
                         }}
                       />
-                      {hasPrevious && <Legend />}
+                      <Legend />
                       {hasPrevious && (
                         <Bar dataKey="Período anterior" fill="#F9AF0B" radius={[4, 4, 0, 0]} />
                       )}
-                      <Bar dataKey="Presenças" fill="#1A1D6B" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Na Igreja" fill="#1A1D6B" stackId="a" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="Online" fill="#6366F1" stackId="a" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -280,22 +369,22 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      window.location.href = exportYear === 'all'
+                    onClick={() => handleDownload(
+                      exportYear === 'all'
                         ? '/admin/relatorios/exportar'
-                        : `/admin/relatorios/exportar?year=${exportYear}`;
-                    }}
+                        : `/admin/relatorios/exportar?year=${exportYear}`
+                    )}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    Exportar CSV
+                    Exportar Excel
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-slate-500">
                   {exportYear === 'all'
-                    ? 'A exportar todos os registos de presença.'
-                    : `A exportar registos de presença do ano ${exportYear}.`}
+                    ? 'Exporta todos os registos de presença para Excel.'
+                    : `Exporta os registos de presença de ${exportYear} para Excel.`}
                 </p>
               </CardContent>
             </Card>
@@ -323,7 +412,7 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                         </div>
                         <div className="text-right">
                           <Badge className="bg-brand-accent/10 text-brand-accent border-0 font-semibold">{s.rate}%</Badge>
-                          <p className="text-xs text-slate-400 mt-1">{s.attended}/{s.total} sessões</p>
+                          <p className="text-xs text-slate-400 mt-1">{s.attended}P · {s.missed}F · {s.total} sessões</p>
                         </div>
                       </div>
                     ))}

@@ -19,10 +19,12 @@ import {
   DialogTitle,
 } from '@/Components/ui/dialog';
 import { Label } from '@/Components/ui/label';
-import { Search, Copy, X, CalendarPlus, ArrowRight, Trash2 } from 'lucide-react';
+import { Copy, X, CalendarPlus, ArrowRight, Trash2 } from 'lucide-react';
 import { PageProps, PaginatedData } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
-import { TablePagination } from '@/Components/AdminTable';
+import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
+import PageHeader from '@/Components/PageHeader';
+import SearchInput from '@/Components/SearchInput';
 
 interface EnrollmentRow {
   id: number;
@@ -44,15 +46,15 @@ interface Props extends PageProps {
 }
 
 export default function Matriculas({ enrollments, classrooms, year, currentYear, availableYears, filters }: Props) {
+  const basePath = '/admin/matriculas';
   const [search, setSearch] = useState(filters.search ?? '');
+  const { handleSort, handlePerPage } = useTableNav(basePath, filters);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [startYearDialogOpen, setStartYearDialogOpen] = useState(false);
   const [fromYear, setFromYear] = useState(String(year));
   const [toYear, setToYear] = useState(String(year + 1));
   const [busy, setBusy] = useState(false);
-  const [clearYearDialogOpen, setClearYearDialogOpen] = useState(false);
-
-  const basePath = '/admin/matriculas';
+  const [clearYearDialogOpen, setClearYearDialogOpen]= useState(false);
   const nextYear = currentYear + 1;
   const nextYearExists = availableYears.includes(nextYear);
   const today = new Date();
@@ -104,21 +106,21 @@ export default function Matriculas({ enrollments, classrooms, year, currentYear,
       <FlashMessage />
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-slate-800">Matrículas</h1>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyDialogOpen(true)}>
-              <Copy className="h-4 w-4" />
-              Copiar entre anos
-            </Button>
-            {enrollments.total > 0 && (
-              <Button size="sm" variant="outline" className="gap-1.5 text-red-600 hover:text-red-700 hover:border-red-300" onClick={() => setClearYearDialogOpen(true)}>
-                <Trash2 className="h-4 w-4" />
-                Apagar {year}
+        <PageHeader
+          title="Matrículas"
+          action={
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyDialogOpen(true)}>
+                <Copy className="h-4 w-4" />Copiar entre anos
               </Button>
-            )}
-          </div>
-        </div>
+              {enrollments.total > 0 && (
+                <Button size="sm" variant="outline" className="gap-1.5 text-red-600 hover:text-red-700 hover:border-red-300" onClick={() => setClearYearDialogOpen(true)}>
+                  <Trash2 className="h-4 w-4" />Apagar {year}
+                </Button>
+              )}
+            </div>
+          }
+        />
 
         {/* Start new year banner */}
         {showStartBanner && (
@@ -177,18 +179,12 @@ export default function Matriculas({ enrollments, classrooms, year, currentYear,
                 </SelectContent>
               </Select>
 
-              <div className="flex gap-2 flex-1 min-w-[12rem]">
-                <Input
-                  placeholder="Pesquisar aluno…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="h-8"
-                />
-                <Button size="sm" variant="outline" onClick={handleSearch} className="h-8">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                onSearch={handleSearch}
+                placeholder="Pesquisar aluno…"
+              />
 
               {hasFilters && (
                 <Button size="sm" variant="ghost" className="h-8 text-slate-500" onClick={clearFilters}>
@@ -214,10 +210,10 @@ export default function Matriculas({ enrollments, classrooms, year, currentYear,
               <table className="w-full text-sm admin-table">
                 <thead className="border-b border-slate-100 bg-slate-50/50">
                   <tr>
-                    <th className="text-left px-6 py-3 font-medium text-slate-500">Aluno</th>
+                    <SortableTh label="Aluno" column="student_name" currentSort={filters.sort} currentDir={filters.dir} onSort={handleSort} className="px-6 py-3" />
                     <th className="text-left px-4 py-3 font-medium text-slate-500">Contacto</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-500">Turma</th>
-                    <th className="text-left px-4 py-3 font-medium text-slate-500">Inscrito em</th>
+                    <SortableTh label="Turma" column="classroom_name" currentSort={filters.sort} currentDir={filters.dir} onSort={handleSort} className="px-4 py-3" />
+                    <SortableTh label="Inscrito em" column="enrolled_at" currentSort={filters.sort} currentDir={filters.dir} onSort={handleSort} className="px-4 py-3" />
                     <th className="w-10" />
                   </tr>
                 </thead>
@@ -258,7 +254,7 @@ export default function Matriculas({ enrollments, classrooms, year, currentYear,
           data={enrollments}
           currentPath={basePath}
           params={filters}
-          onPerPageChange={(pp) => router.get(basePath, { ...filters, per_page: pp })}
+          onPerPageChange={handlePerPage}
         />
       </div>
 

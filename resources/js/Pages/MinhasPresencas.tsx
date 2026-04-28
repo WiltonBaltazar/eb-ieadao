@@ -5,7 +5,7 @@ import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import {
-  CalendarCheck, TrendingUp, Zap, Search,
+  CalendarCheck, TrendingUp, Zap, Search, XCircle,
   ArrowUp, ArrowDown, ArrowUpDown, CheckCircle2, ChevronRight,
 } from 'lucide-react';
 import { PageProps, PaginatedData, AttendanceRecord } from '@/types';
@@ -13,7 +13,7 @@ import { TablePagination } from '@/Components/AdminTable';
 
 interface Props extends PageProps {
   attendances: PaginatedData<AttendanceRecord>;
-  stats: { attended: number; total: number; rate: number; streak: number };
+  stats: { attended: number; missed: number; total: number; rate: number; streak: number };
   filters: Record<string, string>;
 }
 
@@ -72,8 +72,8 @@ export default function MinhasPresencas({ attendances, stats, filters }: Props) 
           <h1 className="text-2xl font-bold text-slate-900 mt-0.5">Minhas Presenças</h1>
         </div>
 
-        {/* Stats — 3 cards */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Stats — 4 cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white rounded-2xl border border-slate-200/70 px-4 py-3.5 text-center shadow-sm">
             <div className="flex items-center justify-center mb-1.5">
               <div className="h-8 w-8 rounded-lg bg-brand-primary/10 flex items-center justify-center">
@@ -82,6 +82,16 @@ export default function MinhasPresencas({ attendances, stats, filters }: Props) 
             </div>
             <p className="text-2xl font-bold text-slate-800 tabular-nums">{stats.attended}</p>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mt-0.5">Presenças</p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200/70 px-4 py-3.5 text-center shadow-sm">
+            <div className="flex items-center justify-center mb-1.5">
+              <div className="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center">
+                <XCircle className="h-4 w-4 text-red-500" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-slate-800 tabular-nums">{stats.missed}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mt-0.5">Faltas</p>
           </div>
 
           <div className={`rounded-2xl border px-4 py-3.5 text-center shadow-sm ${rateBg}`}>

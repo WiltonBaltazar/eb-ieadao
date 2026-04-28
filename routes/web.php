@@ -71,6 +71,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::post('/utilizadores/bulk-destroy', [UsersController::class, 'bulkDestroy'])->name('admin.users.bulk-destroy');
     Route::get('/utilizadores/template-alunos', [UsersController::class, 'studentsTemplate'])->name('admin.users.students-template');
     Route::post('/utilizadores/importar-alunos', [UsersController::class, 'importStudents'])->name('admin.users.import-students');
+    Route::post('/utilizadores/importar-mapa-ici', [UsersController::class, 'importMapaIci'])->name('admin.users.import-mapa-ici');
     Route::get('/utilizadores/{user}', [UsersController::class, 'show'])->name('admin.users.show');
     Route::put('/utilizadores/{user}', [UsersController::class, 'update'])->name('admin.users.update');
     Route::patch('/utilizadores/{user}/papel', [UsersController::class, 'updateRole'])->name('admin.users.update-role');
@@ -101,7 +102,9 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::post('/sessoes/{studySession}/importar-presencas', [StudySessionsController::class, 'importAttendance'])->name('admin.sessions.import-attendance');
     Route::get('/sessoes/{studySession}/template-presencas', [StudySessionsController::class, 'attendanceTemplate'])->name('admin.sessions.attendance-template');
     Route::post('/presencas/bulk-destroy', [StudySessionsController::class, 'bulkDestroyAttendances'])->name('admin.attendances.bulk-destroy');
+    Route::post('/presencas/bulk-update-location', [StudySessionsController::class, 'bulkUpdateAttendanceLocation'])->name('admin.attendances.bulk-update-location');
     Route::delete('/presencas/{attendance}', [StudySessionsController::class, 'removeAttendance'])->name('admin.attendances.destroy');
+    Route::patch('/presencas/{attendance}/localizacao', [StudySessionsController::class, 'updateAttendanceLocation'])->name('admin.attendances.update-location');
 
     // Lesson Resources
     Route::post('/sessoes/{studySession}/recursos', [LessonResourcesController::class, 'store'])->name('admin.resources.store');
@@ -120,8 +123,9 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::get('/relatorios', [ReportsController::class, 'index'])->name('admin.reports.index');
     Route::get('/relatorios/chart-data', [ReportsController::class, 'chartData'])->name('admin.reports.chart-data');
     Route::get('/relatorios/registos', [ReportsController::class, 'registros'])->name('admin.reports.registros');
-    Route::get('/relatorios/exportar', [ReportsController::class, 'exportCsv'])->name('admin.reports.export');
+    Route::get('/relatorios/exportar', [ReportsController::class, 'exportAllExcel'])->name('admin.reports.export');
     Route::get('/relatorios/turma/{classroom}/exportar-excel', [ReportsController::class, 'exportClassroomExcel'])->name('admin.reports.export-classroom');
+    Route::get('/relatorios/turma/{classroom}/exportar-mapa', [ReportsController::class, 'exportMapaPresencasExcel'])->name('admin.reports.export-mapa');
     Route::get('/relatorios/periodo/exportar-excel', [ReportsController::class, 'exportPeriodExcel'])->name('admin.reports.export-period');
     Route::get('/relatorios/periodo/exportar-excel-alunos', [ReportsController::class, 'exportStudentsPeriodExcel'])->name('admin.reports.export-period-students');
 });

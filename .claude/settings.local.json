@@ -5,7 +5,19 @@
       "Bash(composer create-project:*)",
       "Bash(php artisan:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(node -e \"require\\(''''docx''''\\); console.log\\(''''ok''''\\)\")",
+      "Bash(npm list:*)",
+      "Bash(node -e \"const d = require\\(''docx''\\); console.log\\(Object.keys\\(d\\).slice\\(0,5\\).join\\('',''\\)\\)\")",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/macbookpro/.nvm/versions/node/**)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v20.17.0/bin:$PATH\")",
+      "Bash(node -e \"const d = require\\(''docx''\\); console.log\\(''docx ok''\\)\")",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const d = require\\(''/Users/macbookpro/.nvm/versions/node/v20.17.0/lib/node_modules/docx''\\); console.log\\(''ok''\\)\")",
+      "Bash(node /Users/macbookpro/Sites/claude/eb-ieadao/make-manual.js)",
+      "Bash(node /Users/macbookpro/Sites/claude/eb-ieadao/make-manual.cjs)",
+      "Bash(npm run *)"
     ]
   }
 }

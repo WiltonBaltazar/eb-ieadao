@@ -22,12 +22,15 @@ import {
 import { Label } from '@/Components/ui/label';
 import { Alert, AlertDescription } from '@/Components/ui/alert';
 import {
-  Search, ArrowRightLeft, Eye, X, Upload, FileSpreadsheet,
+  ArrowRightLeft, Eye, X, Upload, FileSpreadsheet,
   CheckCircle2, AlertCircle, Loader2,
 } from 'lucide-react';
 import { PageProps, PaginatedData } from '@/types';
 import FlashMessage from '@/Components/FlashMessage';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
+import PageHeader from '@/Components/PageHeader';
+import SearchInput from '@/Components/SearchInput';
+import { grupoColors } from '@/lib/constants';
 
 interface StudentRow {
   id: number;
@@ -57,12 +60,6 @@ interface ImportRow {
 
 const VALID_GRUPOS = ['homens', 'senhoras', 'jovens', 'criancas'];
 
-const grupoColors: Record<string, string> = {
-  homens:   'bg-indigo-100 text-indigo-700',
-  senhoras: 'bg-pink-100 text-pink-700',
-  jovens:   'bg-amber-100 text-amber-700',
-  criancas: 'bg-teal-100 text-teal-700',
-};
 
 function validateRow(raw: Record<string, unknown>): ImportRow {
   const nome           = String(raw['nome'] ?? raw['Nome'] ?? raw['name'] ?? '').trim();
@@ -207,30 +204,25 @@ export default function Alunos({ students, classrooms, gruposOptions, filters }:
       <FlashMessage />
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">Alunos</h1>
-          <Button size="sm" variant="outline" onClick={() => { resetImport(); setShowImport(true); }}>
-            <Upload className="h-4 w-4 mr-2" />
-            Importar
-          </Button>
-        </div>
+        <PageHeader
+          title="Alunos"
+          action={
+            <Button size="sm" variant="outline" onClick={() => { resetImport(); setShowImport(true); }}>
+              <Upload className="h-4 w-4 mr-2" />Importar
+            </Button>
+          }
+        />
 
         {/* Filters */}
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="flex flex-wrap gap-3">
-              <div className="flex gap-2 flex-1 min-w-[12rem]">
-                <Input
-                  placeholder="Pesquisar por nome ou telefone…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="h-8"
-                />
-                <Button size="sm" variant="outline" onClick={handleSearch} className="h-8">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                onSearch={handleSearch}
+                placeholder="Pesquisar por nome ou telefone…"
+              />
               <Select
                 value={filters.classroom_id ?? 'all'}
                 onValueChange={(v) => handleFilter('classroom_id', v === 'all' ? '' : v)}

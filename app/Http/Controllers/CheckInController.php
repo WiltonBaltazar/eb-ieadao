@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttendanceLocation;
 use App\Exceptions\AttendanceException;
 use App\Exceptions\PhoneNotRegisteredException;
 use App\Models\StudySession;
@@ -49,13 +50,17 @@ class CheckInController extends Controller
         $request->validate([
             'phone' => 'required|string',
             'code' => 'required|string',
+            'location' => ['nullable', 'in:na_igreja,online'],
         ]);
+
+        $location = AttendanceLocation::from($request->location ?? 'na_igreja');
 
         try {
             $this->attendanceService->phoneCheckIn(
                 $request->phone,
                 $studySession,
-                $request->code
+                $request->code,
+                $location
             );
 
             return back()->with('success', 'Presença confirmada!');

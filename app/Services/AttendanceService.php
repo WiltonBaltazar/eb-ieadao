@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AttendanceLocation;
 use App\Enums\CheckInMethod;
 use App\Enums\StudySessionStatus;
 use App\Exceptions\AttendanceException;
@@ -67,14 +68,15 @@ class AttendanceService
         return $session->fresh();
     }
 
-    public function phoneCheckIn(string $phone, int|StudySession $session, string $code): Attendance
+    public function phoneCheckIn(string $phone, int|StudySession $session, string $code, AttendanceLocation $location = AttendanceLocation::NaIgreja): Attendance
     {
         if (!$session instanceof StudySession) {
             $session = StudySession::findOrFail($session);
         }
 
         // 1. Phone must be registered
-        $student = User::where('phone', $phone)
+        $altPhone = str_starts_with($phone, '+') ? ltrim($phone, '+') : '+' . $phone;
+        $student = User::whereIn('phone', [$phone, $altPhone])
             ->whereIn('role', ['student', 'teacher'])
             ->first();
 
@@ -102,7 +104,7 @@ class AttendanceService
         }
 
         // 5. Duplicate check + create
-        return $this->createAttendance($session, $student, null, CheckInMethod::QR);
+        return $this->createAttendance($session, $student, null, CheckInMethod::QR, $location);
     }
 
     public function markPresent(StudySession $session, User $student, User $markedBy): Attendance
@@ -114,7 +116,8 @@ class AttendanceService
         StudySession $session,
         User $student,
         ?User $markedBy,
-        CheckInMethod $method
+        CheckInMethod $method,
+        ?AttendanceLocation $location = null
     ): Attendance {
         $existing = Attendance::where('study_session_id', $session->id)
             ->where('student_id', $student->id)
@@ -129,6 +132,7 @@ class AttendanceService
             'student_id' => $student->id,
             'marked_by_id' => $markedBy?->id,
             'check_in_method' => $method,
+            'location' => $location,
             'checked_in_at' => now(),
         ]);
     }

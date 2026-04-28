@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { grupoColors, statusColors } from '@/lib/constants';
 import { FormEventHandler, useState, useMemo, useRef } from 'react';
 import { useBulkSelect } from '@/hooks/useBulkSelect';
 import BulkActionBar from '@/Components/BulkActionBar';
@@ -36,6 +37,8 @@ import {
   Plus,
   Loader2,
   ClipboardCheck,
+  Building2,
+  Wifi,
 } from 'lucide-react';
 import { LessonResource, PageProps, PaginatedData } from '@/types';
 import { SortableTh, TablePagination, useTableNav } from '@/Components/AdminTable';
@@ -50,6 +53,7 @@ interface AttendedRow {
   grupo_homogeneo_label: string | null;
   method: 'manual' | 'qr' | 'auto';
   method_label: string;
+  location: 'na_igreja' | 'online';
   checked_in_at: string;
   marked_by: string | null;
 }
@@ -80,18 +84,6 @@ interface Props extends PageProps {
   filters: { search?: string; grupo_homogeneo?: string; sort_by?: string; sort_dir?: string; per_page?: string };
 }
 
-const statusColors: Record<string, string> = {
-  open: 'bg-green-100 text-green-800',
-  closed: 'bg-slate-100 text-slate-600',
-  draft: 'bg-yellow-100 text-yellow-800',
-};
-
-const grupoColors: Record<string, string> = {
-  homens: 'bg-indigo-100 text-indigo-700',
-  senhoras: 'bg-pink-100 text-pink-700',
-  jovens: 'bg-amber-100 text-amber-700',
-  criancas: 'bg-teal-100 text-teal-700',
-};
 
 export default function SessaoPresencas({
   studySession,
@@ -115,6 +107,13 @@ export default function SessaoPresencas({
 
   const handleBulkDelete = () => {
     router.post('/admin/presencas/bulk-destroy', { ids: selectedIds }, {
+      onSuccess: () => clearSelection(),
+    });
+  };
+
+  const handleBulkLocationUpdate = (location: 'na_igreja' | 'online') => {
+    router.post('/admin/presencas/bulk-update-location', { ids: selectedIds, location }, {
+      preserveScroll: true,
       onSuccess: () => clearSelection(),
     });
   };
@@ -193,6 +192,12 @@ export default function SessaoPresencas({
         preserveScroll: true,
       });
     }
+  };
+
+  const handleLocationChange = (attendanceId: number, location: string) => {
+    router.patch(`/admin/presencas/${attendanceId}/localizacao`, { location }, {
+      preserveScroll: true,
+    });
   };
 
   // ── Bulk mark presence ──────────────────────────────────────
@@ -903,6 +908,28 @@ export default function SessaoPresencas({
               onConfirmDelete={handleBulkDelete}
               onClear={clearSelection}
               onSelectAll={toggleAll}
+              extraActions={
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2.5 text-xs border-slate-300 text-slate-700 hover:bg-slate-50"
+                    onClick={() => handleBulkLocationUpdate('na_igreja')}
+                  >
+                    <Building2 className="h-3.5 w-3.5 mr-1" />
+                    Na Igreja
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 px-2.5 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+                    onClick={() => handleBulkLocationUpdate('online')}
+                  >
+                    <Wifi className="h-3.5 w-3.5 mr-1" />
+                    Online
+                  </Button>
+                </>
+              }
             />
             {/* Desktop */}
             <div className="hidden md:block overflow-x-auto">
@@ -922,6 +949,7 @@ export default function SessaoPresencas({
                     <SortableTh label="Telefone" column="phone" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
                     <th className="text-left px-4 py-2.5 font-medium text-slate-500">Grupo</th>
                     <SortableTh label="Método" column="check_in_method" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
+                    <th className="text-left px-4 py-2.5 font-medium text-slate-500 text-xs">Participação</th>
                     <SortableTh label="Hora" column="checked_in_at" currentSort={filters.sort_by} currentDir={filters.sort_dir} onSort={handleSort} className="py-2.5" />
                     <th className="text-left px-4 py-2.5 font-medium text-slate-500">Por</th>
                     <th className="px-4 py-2.5"></th>
@@ -932,7 +960,7 @@ export default function SessaoPresencas({
                 <tbody className="divide-y divide-slate-50">
                   {attended.data.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-10 text-center text-slate-400">
+                      <td colSpan={9} className="py-10 text-center text-slate-400">
                         <Users className="h-8 w-8 mx-auto mb-2 opacity-25" />
                         <p className="text-sm font-medium">
                           {hasFilters ? 'Nenhum resultado para este filtro' : 'Ainda não há presenças registadas'}
@@ -985,6 +1013,20 @@ export default function SessaoPresencas({
                           )}
                           {a.method_label}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <select
+                          value={a.location}
+                          onChange={(e) => handleLocationChange(a.id, e.target.value)}
+                          className={`text-xs rounded-md border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-primary cursor-pointer ${
+                            a.location === 'online'
+                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              : 'border-slate-200 bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <option value="na_igreja">Na Igreja</option>
+                          <option value="online">Online</option>
+                        </select>
                       </td>
                       <td className="px-4 py-2.5 text-slate-500 text-xs tabular-nums">{a.checked_in_at}</td>
                       <td className="px-4 py-2.5 text-slate-400 text-xs">{a.marked_by ?? '—'}</td>

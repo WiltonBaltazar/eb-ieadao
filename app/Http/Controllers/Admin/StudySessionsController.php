@@ -246,6 +246,7 @@ class StudySessionsController extends Controller
             'grupo_homogeneo_label' => $a->student->grupo_homogeneo?->label(),
             'method'                => $a->check_in_method->value,
             'method_label'          => $a->check_in_method->label(),
+            'location'              => $a->location?->value ?? 'na_igreja',
             'checked_in_at'         => $a->checked_in_at->format('H:i'),
             'marked_by'             => $a->markedBy?->name,
         ]);
@@ -295,6 +296,36 @@ class StudySessionsController extends Controller
                 ->map(fn ($g) => ['value' => $g->value, 'label' => $g->label()]),
             'filters'       => $request->only(['search', 'grupo_homogeneo', 'sort_by', 'sort_dir', 'per_page']),
         ]);
+    }
+
+    public function bulkUpdateAttendanceLocation(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'ids'      => 'required|array|min:1',
+            'ids.*'    => 'integer|exists:attendances,id',
+            'location' => 'required|in:na_igreja,online',
+        ]);
+
+        Attendance::whereIn('id', $request->ids)
+            ->update(['location' => $request->location]);
+
+        $label = $request->location === 'online' ? 'Online' : 'Na Igreja';
+        $count = count($request->ids);
+
+        return back()->with('success', "{$count} presença(s) definidas como {$label}.");
+    }
+
+    public function updateAttendanceLocation(Request $request, Attendance $attendance): RedirectResponse
+    {
+        $request->validate([
+            'location' => 'required|in:na_igreja,online',
+        ]);
+
+        $attendance->update([
+            'location' => \App\Enums\AttendanceLocation::from($request->location),
+        ]);
+
+        return back()->with('success', 'Tipo de participação atualizado.');
     }
 
     public function removeAttendance(Attendance $attendance): RedirectResponse

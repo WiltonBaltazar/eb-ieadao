@@ -18,4 +18,14 @@ enum GrupoHomogeneo: string
             self::Criancas => 'Grupo Homogéneo de Crianças',
         };
     }
+
+    public function short(): string
+    {
+        return match($this) {
+            self::Homens => 'GHH',
+            self::Senhoras => 'GHS',
+            self::Jovens => 'GHJ',
+            self::Criancas => 'GHC',
+        };
+    }
 }

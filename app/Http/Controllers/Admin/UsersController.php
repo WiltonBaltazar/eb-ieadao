@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\CheckInMethod;
 use App\Enums\GrupoHomogeneo;
 use App\Enums\Role;
+use App\Enums\StudySessionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Classroom;
@@ -12,6 +14,7 @@ use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
 use App\Support\ExcelExport;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -341,14 +344,16 @@ class UsersController extends Controller
             $rowNum = $i + 2;
             $name   = trim((string) ($line[$nameIdx] ?? ''));
             $phone  = trim((string) ($line[$phoneIdx] ?? ''));
+            if ($phone === '?') $phone = '';
 
             if ($name === '' && $phone === '') continue;
 
             if ($name === '') { $errors[] = "Linha {$rowNum}: nome em falta."; continue; }
-            if ($phone === '') { $errors[] = "Linha {$rowNum}: telefone em falta."; continue; }
+
+            $phone = $phone !== '' ? $phone : null;
 
             // Skip if phone already registered
-            if (User::where('phone', $phone)->exists()) {
+            if ($phone !== null && User::where('phone', $phone)->exists()) {
                 $skipped++;
                 continue;
             }
@@ -360,7 +365,7 @@ class UsersController extends Controller
             $student = User::create([
                 'name'            => $name,
                 'phone'           => $phone,
-                'whatsapp'        => $phone,
+                'whatsapp'        => null,
                 'role'            => 'student',
                 'grupo_homogeneo' => $grupo,
                 'classroom_id'    => $classroom->id,
@@ -382,6 +387,233 @@ class UsersController extends Controller
             'created' => $created,
             'skipped' => $skipped,
             'errors'  => $errors,
+        ]);
+    }
+
+    public function importMapaIci(Request $request): JsonResponse
+    {
+        $request->validate([
+            'xlsx'         => 'required|file|mimes:xlsx,xls|max:10240',
+            'classroom_id' => 'required|exists:classrooms,id',
+        ]);
+
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load(
+                $request->file('xlsx')->getRealPath()
+            );
+        } catch (\Exception) {
+            return response()->json(['error' => 'Não foi possível ler o ficheiro Excel.'], 422);
+        }
+
+        $sheet = $spreadsheet->getSheetByName('MAPA GERAL');
+        if (!$sheet) {
+            return response()->json(['error' => 'Folha "MAPA GERAL" não encontrada no ficheiro.'], 422);
+        }
+
+        $rows = $sheet->toArray(null, true, true, false);
+
+        // Row indices (0-based): 6=months, 7=days, 9=header, 10+=students
+        $monthRow = $rows[6] ?? [];
+        $dayRow   = $rows[7] ?? [];
+
+        // Build month abbreviation → number map
+        $monthMap = [
+            'JAN'=>1,'FEV'=>2,'MAR'=>3,'ABR'=>4,'MAI'=>5,'JUN'=>6,
+            'JUL'=>7,'AGO'=>8,'SET'=>9,'OUT'=>10,'NOV'=>11,'DEZ'=>12,
+        ];
+
+        // Build column index → Carbon date for date columns (starting at index 6)
+        $colDates   = [];
+        $currentMonth = null;
+        $year = 2026; // ICI course started Mar.26
+        for ($ci = 6; $ci < count($monthRow); $ci++) {
+            $label = strtoupper(trim((string)($monthRow[$ci] ?? '')));
+            if (isset($monthMap[$label])) {
+                $currentMonth = $monthMap[$label];
+            }
+            $day = $dayRow[$ci] ?? null;
+            if ($currentMonth && is_numeric($day) && $day > 0) {
+                $colDates[$ci] = Carbon::create($year, $currentMonth, (int)$day);
+            }
+        }
+
+        // Identify active columns (at least one P or F in student rows)
+        $studentRows = array_slice($rows, 10);
+        $activeCols = [];
+        foreach ($studentRows as $row) {
+            $ord = $row[0] ?? null;
+            if (!is_numeric($ord) || (int)$ord <= 0) continue;
+            foreach ($colDates as $ci => $date) {
+                $val = strtoupper(trim((string)($row[$ci] ?? '')));
+                if ($val === 'P' || $val === 'F') {
+                    $activeCols[$ci] = true;
+                }
+            }
+        }
+        ksort($activeCols);
+
+        $classroom = Classroom::findOrFail($request->classroom_id);
+        $year      = Setting::currentAcademicYear();
+
+        // Create study sessions for active columns
+        $sessionMap      = [];
+        $sessionsCreated = 0;
+        $lessonNum       = 1;
+        foreach (array_keys($activeCols) as $ci) {
+            $date = $colDates[$ci] ?? now()->toDateString();
+            [$session, $wasCreated] = [
+                StudySession::firstOrCreate(
+                    ['classroom_id' => $classroom->id, 'title' => "Aula {$lessonNum}"],
+                    [
+                        'session_date'         => $date,
+                        'status'               => StudySessionStatus::Closed,
+                        'attendance_closed_at' => now(),
+                    ]
+                ),
+                false,
+            ];
+            // Check if it was just created
+            if ($session->wasRecentlyCreated) {
+                $sessionsCreated++;
+            }
+            $sessionMap[$ci] = $session;
+            $lessonNum++;
+        }
+
+        // GH code → grupo_homogeneo DB value
+        $ghMap = [];
+        foreach (GrupoHomogeneo::cases() as $case) {
+            $ghMap[$case->short()] = $case->value;
+        }
+
+        $studentsCreated    = 0;
+        $studentsUpdated    = 0;
+        $attendancesCreated = 0;
+        $skipped            = 0;
+        $errors             = [];
+
+        foreach ($studentRows as $i => $row) {
+            $rowNum = $i + 11;
+
+            $ord = $row[0] ?? null;
+            if (!is_numeric($ord) || (int)$ord <= 0) continue;
+
+            $name = trim((string)($row[1] ?? ''));
+            if ($name === '') {
+                $errors[] = "Linha {$rowNum}: nome em falta.";
+                continue;
+            }
+
+            // Prefer WA (col 3) over CONTACTO (col 2)
+            $rawWa       = trim((string)($row[3] ?? ''));
+            $rawPhone    = trim((string)($row[2] ?? ''));
+            if ($rawWa === '?') $rawWa = '';
+            if ($rawPhone === '?') $rawPhone = '';
+            $waDigits    = preg_replace('/\D/', '', $rawWa);
+            $phoneDigits = preg_replace('/\D/', '', $rawPhone);
+
+            $phoneRaw = $waDigits !== '' ? $waDigits : $phoneDigits;
+            $phone    = ($phoneRaw !== '' && strlen($phoneRaw) >= 5) ? $phoneRaw : null;
+            $whatsapp = $waDigits !== '' ? $waDigits : null;
+
+            $ghCode = strtoupper(trim((string)($row[5] ?? '')));
+            $grupo  = $ghMap[$ghCode] ?? null;
+            $email  = trim((string)($row[4] ?? '')) ?: null;
+
+            // Determine enrollment date = date of student's first P in the file
+            $firstPDate = null;
+            foreach ($sessionMap as $ci => $session) {
+                $val = strtoupper(trim((string)($row[$ci] ?? '')));
+                if ($val === 'P') {
+                    if ($firstPDate === null || $session->session_date->lt($firstPDate)) {
+                        $firstPDate = $session->session_date->copy();
+                    }
+                }
+            }
+            // Fallback: use the first session date in the map
+            if ($firstPDate === null && !empty($sessionMap)) {
+                $firstPDate = collect($sessionMap)->sortBy(fn ($s) => $s->session_date)->first()?->session_date->copy();
+            }
+            $enrolledAt = $firstPDate ?? now();
+
+            $existing = $phone !== null ? User::where('phone', $phone)->first() : null;
+
+            if ($existing) {
+                $existing->update([
+                    'name'            => $name,
+                    'whatsapp'        => $whatsapp ?? $existing->whatsapp,
+                    'grupo_homogeneo' => $grupo ?? $existing->grupo_homogeneo?->value,
+                    'classroom_id'    => $classroom->id,
+                ]);
+                $student = $existing;
+                $studentsUpdated++;
+
+                // Ensure enrollment exists; update enrolled_at if earlier than current
+                $enrollment = Enrollment::where('student_id', $student->id)
+                    ->where('classroom_id', $classroom->id)
+                    ->where('academic_year', $year)
+                    ->first();
+
+                if (!$enrollment) {
+                    Enrollment::create([
+                        'student_id'     => $student->id,
+                        'classroom_id'   => $classroom->id,
+                        'academic_year'  => $year,
+                        'enrolled_at'    => $enrolledAt,
+                        'enrolled_by_id' => auth()->id(),
+                    ]);
+                } elseif ($enrollment->enrolled_at === null || $enrolledAt->lt($enrollment->enrolled_at)) {
+                    $enrollment->update(['enrolled_at' => $enrolledAt]);
+                }
+            } else {
+                $student = User::create([
+                    'name'            => $name,
+                    'phone'           => $phone,
+                    'whatsapp'        => $whatsapp,
+                    'email'           => $email,
+                    'role'            => 'student',
+                    'grupo_homogeneo' => $grupo,
+                    'classroom_id'    => $classroom->id,
+                    'password'        => null,
+                ]);
+
+                Enrollment::create([
+                    'student_id'     => $student->id,
+                    'classroom_id'   => $classroom->id,
+                    'academic_year'  => $year,
+                    'enrolled_at'    => $enrolledAt,
+                    'enrolled_by_id' => auth()->id(),
+                ]);
+
+                $studentsCreated++;
+            }
+
+            // Import attendance: P = create record, F = no record (counted as missed via ratio)
+            foreach ($sessionMap as $ci => $session) {
+                $val = strtoupper(trim((string)($row[$ci] ?? '')));
+                if ($val === 'P') {
+                    $att = Attendance::firstOrCreate(
+                        ['study_session_id' => $session->id, 'student_id' => $student->id],
+                        [
+                            'check_in_method' => CheckInMethod::Manual,
+                            'checked_in_at'   => $session->session_date,
+                            'marked_by_id'    => auth()->id(),
+                        ]
+                    );
+                    if ($att->wasRecentlyCreated) {
+                        $attendancesCreated++;
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'students_created'    => $studentsCreated,
+            'students_updated'    => $studentsUpdated,
+            'sessions_created'    => $sessionsCreated,
+            'attendances_created' => $attendancesCreated,
+            'skipped'             => $skipped,
+            'errors'              => $errors,
         ]);
     }
 }
