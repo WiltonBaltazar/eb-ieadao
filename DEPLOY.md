@@ -30,16 +30,43 @@ If your cPanel account root is `/home/username/`:
 1. Upload non-public files to `/home/username/laravel/`
 2. Copy or symlink `public/` contents to `public_html/`
 3. Use [public/.htaccess](/Users/macbookpro/Sites/Codex/eb-ieadao/public/.htaccess) for Laravel routing and HTTPS
+4. Make sure `public_html/` contains at least:
+   - `index.php`
+   - `.htaccess`
+   - `build/`
+   - `favicon.ico`
+   - `robots.txt`
+5. If `public_html/index.php` was copied manually, update the paths so they point to the real app folder:
+   ```php
+   require __DIR__.'/../laravel/vendor/autoload.php';
+   $app = require_once __DIR__.'/../laravel/bootstrap/app.php';
+   ```
 
 ### SSL / HTTPS
 
 The `.htaccess` files in this repo:
 
-- force HTTPS when SSL is available
 - keep Laravel routing working behind Apache
 - send requests to `public/index.php`
 
-You still need to enable the SSL certificate in your hosting panel first. The `.htaccess` rules only redirect traffic to HTTPS after SSL exists.
+On shared hosting, it is usually better to let cPanel or your hosting panel manage SSL and HTTPS redirects. Enable the certificate first, then turn on "Force HTTPS" in the host panel if you want it.
+
+## 404 Troubleshooting
+
+If the site shows a 404 after deployment, it is usually one of these:
+
+1. The domain is pointing to the wrong folder.
+   - Best case: point the domain directly to `/home/username/ieadao/public`
+   - If the domain points to `public_html`, then `public_html/index.php` and `public_html/.htaccess` must be present
+2. Apache rewrites are not being applied.
+   - Ensure `mod_rewrite` is enabled on the host
+   - Ensure the correct `.htaccess` file is in the actual web root, not only in the repo root
+3. The app is being served from the repo root instead of `public/`.
+   - Laravel must enter through `public/index.php`
+4. The Vite assets are missing.
+   - Check that `public/build/manifest.json` exists after `npm run build`
+5. The host is showing a Laravel route 404, not an Apache 404.
+   - If Apache is working, `/` should redirect to the student login route defined in `routes/web.php`
 
 ## Environment Setup
 
