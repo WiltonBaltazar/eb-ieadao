@@ -1,72 +1,45 @@
 # IEADAO Presenças — Deployment Guide
 
-## Coolify + Dockerfile
+## Shared Hosting / cPanel
 
-This project now ships a Dockerfile for Coolify deployments. Use this path for production on the Docker-based stack.
+This project is set up to deploy on shared hosting with Apache and PHP.
 
-### Coolify settings
+### Recommended layout
 
-- Build method: Dockerfile from the repo root
-- Container port: `8086`
-- Healthcheck: keep enabled only if the image has `wget` or `curl` available
-- Runtime env vars: configure them in Coolify, do not bake a local `.env` into the image
-- Persistent uploads: mount a volume for `storage` if needed
-- `APP_KEY` should still be set in Coolify, but the container will generate a fallback key if it is missing
+If your cPanel account root is `/home/username/`:
 
-### Required production env vars
-
-Set these in Coolify before deploy:
-
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://your-domain.com
-APP_KEY=base64:...
-
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=ieadao_db
-DB_USERNAME=ieadao_user
-DB_PASSWORD=strong_password
+```
+/home/username/
+├── .htaccess          ← root redirect to public/
+├── public_html/       ← point domain here OR
+│   └── (symlink or copy public/ contents)
+└── laravel/           ← app root
+    ├── public/
+    ├── app/
+    └── ...
 ```
 
-Notes:
+### Option A: Laravel in subdirectory
 
-- Set `APP_KEY` in Coolify so it stays stable between deploys
-- The container can generate a fallback key if `APP_KEY` is missing, but that is only a safety net
-- Do not use `DB_CONNECTION=sqlite` in production
-- The image exposes port `8086`, so Coolify should map traffic to that port
-- The container runs migrations on boot, so database access must be ready when the app starts
+1. Upload all files to `/home/username/ieadao/`
+2. Set the document root in cPanel to `/home/username/ieadao/public`
+3. Use the root [`.htaccess`](/Users/macbookpro/Sites/Codex/eb-ieadao/.htaccess) if your host requires requests to pass through `public/`
 
-### Recommended deploy flow
+### Option B: public_html deployment
 
-1. Push the branch to GitHub
-2. Let Coolify build the Docker image from the repo root
-3. Confirm the container starts on port `8086`
-4. If this is the first deploy, optionally run `php artisan db:seed --force`
+1. Upload non-public files to `/home/username/laravel/`
+2. Copy or symlink `public/` contents to `public_html/`
+3. Use [public/.htaccess](/Users/macbookpro/Sites/Codex/eb-ieadao/public/.htaccess) for Laravel routing and HTTPS
 
-### Troubleshooting
+### SSL / HTTPS
 
-#### Healthcheck problems
+The `.htaccess` files in this repo:
 
-These are Coolify/container startup issues, not Laravel exceptions.
+- force HTTPS when SSL is available
+- keep Laravel routing working behind Apache
+- send requests to `public/index.php`
 
-- If the container is marked unhealthy, check whether the image has `wget` or `curl`
-- If Coolify healthchecks `/` and fails immediately, confirm the app is listening on `8086`
-- If the healthcheck fails before app logs show a Laravel exception, the problem is usually the container healthcheck command or port mapping
-- If needed, disable the Coolify healthcheck temporarily while you confirm the app boots
-
-#### Laravel app 500s
-
-These are application/runtime issues after nginx and PHP-FPM are already running.
-
-- Check `storage/logs/laravel.log` for the actual exception
-- Verify `APP_KEY` is set in Coolify
-- Verify the production database is reachable and migrated
-- Make sure the `settings`, `cache`, and `sessions` tables exist if the app uses those drivers
-- If the first page load 500s, remember `HandleInertiaRequests` reads the `settings` table on request
-- If the container starts but the app returns 500, the issue is inside Laravel, not Coolify's healthcheck
+You still need to enable the SSL certificate in your hosting panel first. The `.htaccess` rules only redirect traffic to HTTPS after SSL exists.
 
 ## Environment Setup
 
@@ -90,7 +63,7 @@ QUEUE_CONNECTION=database
 ```
 
 **Important:** Never use `DB_CONNECTION=sqlite` in production.
-For Docker/Coolify, keep `APP_KEY`, database settings, and other secrets in the platform environment variables instead of baking them into the image.
+Keep `APP_KEY`, database settings, and other secrets in your hosting panel or `.env` file on the server.
 
 ## Build Steps (run in order)
 
@@ -152,8 +125,9 @@ If your cPanel account root is `/home/username/`:
    ```
 
 ### Vite Assets (npm run build)
+
 After `npm run build`, the compiled assets are in `public/build/`.
-Always run `npm run build` **before** deploying or running `php artisan` commands.
+Always run `npm run build` **before** uploading the project or running `php artisan` commands on shared hosting.
 
 The `public/build/manifest.json` must exist for Vite to work in production.
 
