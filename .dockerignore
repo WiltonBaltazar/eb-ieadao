@@ -1,11 +1,13 @@
 .git
 .github
 .claude
+.env
 node_modules
 vendor
 public/build
 storage/framework
 storage/logs
 storage/*.key
+database/database.sqlite
 manual-estudante.docx
 ~$*

@@ -49,7 +49,9 @@ Production deployments for Coolify use the Dockerfile in the repo root.
 - Coolify should be configured to expose `8086`
 - The app serves Laravel through nginx + PHP-FPM in the Docker image
 - Keep your normal Laravel environment variables in Coolify
+- Do not bake a local `.env` into the image; Coolify should inject production values
 - If you need persistent uploads, mount a volume for `storage`
+- Run database migrations on deploy before sending traffic to the app
 
 For local Docker checks, build from the repo root with `docker build .`.
 
