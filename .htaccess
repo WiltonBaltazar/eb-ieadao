@@ -1,4 +1,12 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Force HTTPS when the hosting provider has SSL enabled
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Send requests to the Laravel public directory
+    RewriteRule ^$ public/ [L]
+    RewriteRule (.*) public/$1 [L]
 </IfModule>
