@@ -1,5 +1,73 @@
 # IEADAO Presenças — Deployment Guide
 
+## Coolify + Dockerfile
+
+This project now ships a Dockerfile for Coolify deployments. Use this path for production on the Docker-based stack.
+
+### Coolify settings
+
+- Build method: Dockerfile from the repo root
+- Container port: `8086`
+- Healthcheck: keep enabled only if the image has `wget` or `curl` available
+- Runtime env vars: configure them in Coolify, do not bake a local `.env` into the image
+- Persistent uploads: mount a volume for `storage` if needed
+- `APP_KEY` should still be set in Coolify, but the container will generate a fallback key if it is missing
+
+### Required production env vars
+
+Set these in Coolify before deploy:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.com
+APP_KEY=base64:...
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=ieadao_db
+DB_USERNAME=ieadao_user
+DB_PASSWORD=strong_password
+```
+
+Notes:
+
+- Set `APP_KEY` in Coolify so it stays stable between deploys
+- The container can generate a fallback key if `APP_KEY` is missing, but that is only a safety net
+- Do not use `DB_CONNECTION=sqlite` in production
+- The image exposes port `8086`, so Coolify should map traffic to that port
+- The container runs migrations on boot, so database access must be ready when the app starts
+
+### Recommended deploy flow
+
+1. Push the branch to GitHub
+2. Let Coolify build the Docker image from the repo root
+3. Confirm the container starts on port `8086`
+4. If this is the first deploy, optionally run `php artisan db:seed --force`
+
+### Troubleshooting
+
+#### Healthcheck problems
+
+These are Coolify/container startup issues, not Laravel exceptions.
+
+- If the container is marked unhealthy, check whether the image has `wget` or `curl`
+- If Coolify healthchecks `/` and fails immediately, confirm the app is listening on `8086`
+- If the healthcheck fails before app logs show a Laravel exception, the problem is usually the container healthcheck command or port mapping
+- If needed, disable the Coolify healthcheck temporarily while you confirm the app boots
+
+#### Laravel app 500s
+
+These are application/runtime issues after nginx and PHP-FPM are already running.
+
+- Check `storage/logs/laravel.log` for the actual exception
+- Verify `APP_KEY` is set in Coolify
+- Verify the production database is reachable and migrated
+- Make sure the `settings`, `cache`, and `sessions` tables exist if the app uses those drivers
+- If the first page load 500s, remember `HandleInertiaRequests` reads the `settings` table on request
+- If the container starts but the app returns 500, the issue is inside Laravel, not Coolify's healthcheck
+
 ## Environment Setup
 
 Copy `.env.example` to `.env` and configure:
@@ -17,11 +85,12 @@ DB_DATABASE=ieadao_db
 DB_USERNAME=ieadao_user
 DB_PASSWORD=strong_password
 
-SESSION_DRIVER=file
-QUEUE_CONNECTION=sync
+SESSION_DRIVER=database
+QUEUE_CONNECTION=database
 ```
 
 **Important:** Never use `DB_CONNECTION=sqlite` in production.
+For Docker/Coolify, keep `APP_KEY`, database settings, and other secrets in the platform environment variables instead of baking them into the image.
 
 ## Build Steps (run in order)
 
