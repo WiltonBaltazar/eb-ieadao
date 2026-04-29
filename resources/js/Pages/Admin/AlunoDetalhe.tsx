@@ -39,6 +39,7 @@ interface SessionRow {
   method: string | null;
   method_label: string | null;
   checked_in_at: string | null;
+  before_enrollment: boolean;
 }
 
 interface Stats {
@@ -370,9 +371,14 @@ export default function AlunoDetalhe({
                           </td>
                           <td className="px-6 py-4 text-slate-600">{session.teacher_name ?? '—'}</td>
                           <td className="px-6 py-4">
-                            <Badge className="bg-red-100 text-red-700 flex w-fit items-center gap-1">
-                              <X className="h-3.5 w-3.5" />Ausente
-                            </Badge>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Badge className="bg-red-100 text-red-700 flex w-fit items-center gap-1">
+                                <X className="h-3.5 w-3.5" />Ausente
+                              </Badge>
+                              {session.before_enrollment && (
+                                <Badge className="bg-slate-100 text-slate-500 text-xs">Antes da matrícula</Badge>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4"><span className="text-slate-400">—</span></td>
                           <td className="px-6 py-4 text-slate-600">—</td>
@@ -421,9 +427,14 @@ export default function AlunoDetalhe({
                           <Calendar className="h-3 w-3" />{session.session_date}
                         </p>
                       </div>
-                      <Badge className="bg-red-100 text-red-700 flex items-center gap-1">
-                        <X className="h-3.5 w-3.5" />Ausente
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge className="bg-red-100 text-red-700 flex items-center gap-1">
+                          <X className="h-3.5 w-3.5" />Ausente
+                        </Badge>
+                        {session.before_enrollment && (
+                          <Badge className="bg-slate-100 text-slate-500 text-xs">Antes da matrícula</Badge>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

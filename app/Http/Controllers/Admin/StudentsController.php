@@ -154,9 +154,10 @@ class StudentsController extends Controller
             'session_ids.*' => 'integer',
         ]);
 
-        $service = app(AttendanceService::class);
-        $admin   = $request->user();
-        $count   = 0;
+        $service      = app(AttendanceService::class);
+        $admin        = $request->user();
+        $count        = 0;
+        $earliestDate = null;
 
         foreach ($request->session_ids as $sessionId) {
             $session = StudySession::find($sessionId);
@@ -168,8 +169,24 @@ class StudentsController extends Controller
             try {
                 $service->markPresent($session, $user, $admin);
                 $count++;
+
+                if ($earliestDate === null || $session->session_date->lt($earliestDate)) {
+                    $earliestDate = $session->session_date->copy();
+                }
             } catch (AttendanceException) {
                 // duplicate — skip silently
+            }
+        }
+
+        // Push enrolled_at back if we marked a session earlier than the current enrollment date
+        if ($count > 0 && $earliestDate) {
+            $enrollment = Enrollment::where('student_id', $user->id)
+                ->where('academic_year', $earliestDate->year)
+                ->whereNull('transferred_at')
+                ->first();
+
+            if ($enrollment && ($enrollment->enrolled_at === null || $earliestDate->lt($enrollment->enrolled_at))) {
+                $enrollment->update(['enrolled_at' => $earliestDate->toDateString()]);
             }
         }
 
