@@ -113,11 +113,8 @@ class UsersController extends Controller
             ->with('teacher');
 
         $fromDate = $enrollmentForYear?->enrolled_at ?? $user->created_at;
-        if ($fromDate) {
-            $query->where('session_date', '>=', $fromDate->toDateString());
-        }
 
-        // All sessions in classroom/year (without date filter) — for counting actual attendances
+        // All sessions in classroom/year — for counting actual attendances and display
         $allClassroomIds = StudySession::where('classroom_id', $classroomIdForSessions)
             ->whereIn('status', ['open', 'closed'])
             ->whereYear('session_date', $selectedYear)
@@ -131,8 +128,10 @@ class UsersController extends Controller
         $attendedIds = $attendanceMap->keys();
         $attendedAll = $attendanceMap->count();
 
-        // Sessions from enrollment date onward (for total denominator)
-        $requiredIds = (clone $query)->pluck('id');
+        // Sessions from enrollment date onward (for total denominator only)
+        $requiredIds = (clone $query)
+            ->when($fromDate, fn ($q) => $q->where('session_date', '>=', $fromDate->toDateString()))
+            ->pluck('id');
 
         // Total = required sessions ∪ any attended before the cutoff (don't hide early attendances)
         $totalAll = $requiredIds->union($attendedIds)->unique()->count();
@@ -145,18 +144,19 @@ class UsersController extends Controller
 
         $perPage = in_array((int) $request->input('per_page'), [25, 50, 100]) ? (int) $request->input('per_page') : 25;
 
-        $sessions = $query->paginate($perPage)->withQueryString()->through(function ($s) use ($attendanceMap) {
+        $sessions = $query->paginate($perPage)->withQueryString()->through(function ($s) use ($attendanceMap, $fromDate) {
             $att = $attendanceMap->get($s->id);
             return [
-                'id'               => $s->id,
-                'title'            => $s->title,
-                'session_date'     => $s->session_date->format('d/m/Y'),
-                'session_date_iso' => $s->session_date->format('Y-m-d'),
-                'teacher_name'     => $s->teacher?->name,
-                'attended'         => $att !== null,
-                'method'           => $att?->check_in_method->value,
-                'method_label'     => $att?->check_in_method->label(),
-                'checked_in_at'    => $att?->checked_in_at->format('H:i'),
+                'id'                => $s->id,
+                'title'             => $s->title,
+                'session_date'      => $s->session_date->format('d/m/Y'),
+                'session_date_iso'  => $s->session_date->format('Y-m-d'),
+                'teacher_name'      => $s->teacher?->name,
+                'attended'          => $att !== null,
+                'method'            => $att?->check_in_method->value,
+                'method_label'      => $att?->check_in_method->label(),
+                'checked_in_at'     => $att?->checked_in_at->format('H:i'),
+                'before_enrollment' => $fromDate && $s->session_date->lt($fromDate),
             ];
         });
 
