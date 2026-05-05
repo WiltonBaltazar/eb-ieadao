@@ -44,7 +44,7 @@ function CountdownBadge({ expiresAt }: { expiresAt: string }) {
 export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoSessaoPageProps) {
   const { flash, errors } = usePage<PageProps>().props;
 
-  const { data, setData, post, processing } = useForm({
+  const { data, setData, post, reset, processing } = useForm({
     phone: auth_phone ?? '',
     code: session.check_in_code ?? '',
     location: '' as '' | 'na_igreja' | 'online',
@@ -52,7 +52,7 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
 
   const handleSubmit: FormEventHandler = (e) => {
     e.preventDefault();
-    post(`/check-in/${session.id}`);
+    post(`/check-in/${session.id}`, { onSuccess: () => reset() });
   };
 
   const statusConfig: Record<string, { label: string; bg: string; dot: string }> = {

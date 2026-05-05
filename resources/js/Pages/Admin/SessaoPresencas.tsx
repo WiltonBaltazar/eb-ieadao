@@ -488,7 +488,10 @@ export default function SessaoPresencas({
                               ? 'bg-blue-50 border-l-2 border-blue-500'
                               : ''
                             }`}
-                          onClick={() => markForm.setData('student_id', String(s.id))}
+                          onClick={() => {
+                            markForm.setData('student_id', String(s.id));
+                            setStudentSearch('');
+                          }}
                         >
                           <div className="text-left">
                             <span className="font-medium text-slate-800">{s.name}</span>

@@ -4,11 +4,15 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+const SelectRoot = SelectPrimitive.Root as React.FC<
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root> & { modal?: boolean }
+>
+
 const Select = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root> & { modal?: boolean }
 >(({ modal = false, ...props }, ref) => (
-  <SelectPrimitive.Root modal={modal} {...props} />
+  <SelectRoot modal={modal} {...props} />
 ))
 Select.displayName = 'Select'
 
