@@ -56,14 +56,15 @@ class CheckInController extends Controller
         $location = AttendanceLocation::from($request->location ?? 'na_igreja');
 
         try {
-            $this->attendanceService->phoneCheckIn(
+            $attendance = $this->attendanceService->phoneCheckIn(
                 $request->phone,
                 $studySession,
                 $request->code,
                 $location
             );
 
-            return back()->with('success', 'Presença confirmada!');
+            $name = $attendance->student->name;
+            return back()->with('success', "{$name}: a sua presença foi confirmada!");
         } catch (PhoneNotRegisteredException $e) {
             return redirect()->route('registration.show', $studySession)
                 ->with('phone', $e->phone)
