@@ -22,6 +22,11 @@ class ExcelExport
         // Always open on the first sheet regardless of what the build added
         $spreadsheet->setActiveSheetIndex(0);
 
+        // Fix zoom to 100% so mobile apps don't open at a weird scale
+        foreach ($spreadsheet->getAllSheets() as $s) {
+            $s->getSheetView()->setZoomScale(100);
+        }
+
         $tmp = tempnam(sys_get_temp_dir(), 'xlsx_') . '.xlsx';
         (new Xlsx($spreadsheet))->save($tmp);
 

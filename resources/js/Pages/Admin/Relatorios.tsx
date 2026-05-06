@@ -86,6 +86,7 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
   const [exportYear, setExportYear] = useState<string>(
     availableYears.length > 0 ? String(availableYears[0]) : 'all'
   );
+  const [exportLocation, setExportLocation] = useState<string>('all');
   const [mapaClassroom, setMapaClassroom] = useState<string>(
     classrooms.length > 0 ? String(classrooms[0].id) : ''
   );
@@ -352,9 +353,9 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
           {/* Registos */}
           <TabsContent value="registos">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap">
                 <CardTitle className="text-base">Registos de Presença</CardTitle>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
                   <Select value={exportYear} onValueChange={setExportYear}>
                     <SelectTrigger className="h-8 w-36">
                       <SelectValue />
@@ -366,14 +367,26 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select value={exportLocation} onValueChange={setExportLocation}>
+                    <SelectTrigger className="h-8 w-44">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tipo de participação</SelectItem>
+                      <SelectItem value="na_igreja">Na Igreja</SelectItem>
+                      <SelectItem value="online">Online</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleDownload(
-                      exportYear === 'all'
-                        ? '/admin/relatorios/exportar'
-                        : `/admin/relatorios/exportar?year=${exportYear}`
-                    )}
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      if (exportYear !== 'all') params.set('year', exportYear);
+                      if (exportLocation !== 'all') params.set('location', exportLocation);
+                      const qs = params.toString();
+                      handleDownload(`/admin/relatorios/exportar${qs ? `?${qs}` : ''}`);
+                    }}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Exportar Excel
@@ -382,9 +395,13 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-slate-500">
-                  {exportYear === 'all'
+                  {exportYear === 'all' && exportLocation === 'all'
                     ? 'Exporta todos os registos de presença para Excel.'
-                    : `Exporta os registos de presença de ${exportYear} para Excel.`}
+                    : exportYear !== 'all' && exportLocation !== 'all'
+                    ? `Exporta os registos de ${exportYear} com participação "${exportLocation === 'na_igreja' ? 'Na Igreja' : 'Online'}" para Excel.`
+                    : exportYear !== 'all'
+                    ? `Exporta os registos de presença de ${exportYear} para Excel.`
+                    : `Exporta os registos com participação "${exportLocation === 'na_igreja' ? 'Na Igreja' : 'Online'}" para Excel.`}
                 </p>
               </CardContent>
             </Card>

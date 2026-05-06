@@ -81,7 +81,7 @@ interface Props extends PageProps {
   notAttended: NotAttendedRow[];
   resources: LessonResource[];
   gruposOptions: Array<{ value: string; label: string }>;
-  filters: { search?: string; grupo_homogeneo?: string; sort_by?: string; sort_dir?: string; per_page?: string };
+  filters: { search?: string; grupo_homogeneo?: string; location?: string; sort_by?: string; sort_dir?: string; per_page?: string };
 }
 
 
@@ -97,7 +97,7 @@ export default function SessaoPresencas({
 
   // ── Attended list filters (client-side on the already-filtered server data) ──
   const [tableSearch, setTableSearch] = useState(filters.search ?? '');
-  const hasFilters = !!(filters.search || filters.grupo_homogeneo);
+  const hasFilters = !!(filters.search || filters.grupo_homogeneo || filters.location);
   const basePath = `/admin/sessoes/${studySession.id}/presencas`;
   const { handleSort: baseHandleSort, handlePerPage: baseHandlePerPage } = useTableNav(basePath, filters);
   const { selectedIds, selectedCount, isAllSelected, isIndeterminate, isSelected, toggleOne, toggleAll, clearSelection } = useBulkSelect(attended.data);
@@ -886,6 +886,24 @@ export default function SessaoPresencas({
                     {gruposOptions.map((g) => (
                       <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={filters.location ?? 'all'}
+                  onValueChange={(v) => applyFilter('location', v === 'all' ? '' : v)}
+                >
+                  <SelectTrigger className="h-7 w-40 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tipo de participação</SelectItem>
+                    <SelectItem value="na_igreja">
+                      <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" />Na Igreja</span>
+                    </SelectItem>
+                    <SelectItem value="online">
+                      <span className="flex items-center gap-1.5"><Wifi className="h-3.5 w-3.5" />Online</span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
