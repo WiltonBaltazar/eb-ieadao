@@ -34,7 +34,7 @@ class CheckInController extends Controller
                     'name' => $studySession->classroom->name,
                 ],
                 'check_in_code' => $studySession->check_in_code,
-                'check_in_code_expires_at' => $studySession->check_in_code_expires_at?->toISOString(),
+                'check_in_code_expires_at' => $studySession->check_in_code_expires_at?->toRfc3339String(),
             ],
             'auth_phone' => Auth::check() && (Auth::user()->isStudent() || Auth::user()->isTeacher())
                 ? Auth::user()->phone

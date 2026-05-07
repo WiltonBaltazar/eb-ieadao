@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { todayMaputo, firstOfMonthMaputo, firstOfMonthAgoMaputo, lastOfPrevMonthMaputo } from '@/lib/dates';
 import { useCallback, useEffect, useState } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
@@ -52,10 +53,7 @@ interface Props extends PageProps {
 }
 
 function defaultRange(): { from: string; to: string } {
-  const now = new Date();
-  const to = now.toISOString().slice(0, 10);
-  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  return { from, to };
+  return { from: firstOfMonthMaputo(), to: todayMaputo() };
 }
 
 /** Download an xlsx file via fetch+blob so the page never navigates. */
@@ -151,20 +149,16 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
   }, [fetchChart]);
 
   const setPreset = (preset: 'this-month' | 'last-month' | 'last-3-months') => {
-    const now = new Date();
-    let f: Date, t: Date;
     if (preset === 'this-month') {
-      f = new Date(now.getFullYear(), now.getMonth(), 1);
-      t = now;
+      setFrom(firstOfMonthMaputo());
+      setTo(todayMaputo());
     } else if (preset === 'last-month') {
-      f = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      t = new Date(now.getFullYear(), now.getMonth(), 0);
+      setFrom(firstOfMonthAgoMaputo(1));
+      setTo(lastOfPrevMonthMaputo());
     } else {
-      f = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-      t = now;
+      setFrom(firstOfMonthAgoMaputo(2));
+      setTo(todayMaputo());
     }
-    setFrom(f.toISOString().slice(0, 10));
-    setTo(t.toISOString().slice(0, 10));
   };
 
   return (

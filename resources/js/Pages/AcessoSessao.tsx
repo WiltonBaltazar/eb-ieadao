@@ -1,4 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { formatMaputo } from '@/lib/dates';
 import { FormEventHandler, useEffect, useState } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Button } from '@/Components/ui/button';
@@ -90,9 +91,7 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
               </div>
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Calendar className="h-4 w-4 text-slate-400" />
-                {new Date(session.session_date).toLocaleDateString('pt-PT', {
-                  weekday: 'long', day: 'numeric', month: 'long'
-                })}
+                {formatMaputo(session.session_date, { weekday: 'long', day: 'numeric', month: 'long' })}
               </div>
             </div>
 
