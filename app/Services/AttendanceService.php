@@ -100,7 +100,7 @@ class AttendanceService
         }
 
         if ($session->check_in_code_expires_at && now()->isAfter($session->check_in_code_expires_at)) {
-            throw new AttendanceException('O código QR expirou. Solicita um novo código ao professor.');
+            throw new AttendanceException('O tempo para confirmar presença na aula expirou.');
         }
 
         // 5. Duplicate check + create
