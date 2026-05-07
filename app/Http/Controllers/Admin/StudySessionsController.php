@@ -61,7 +61,7 @@ class StudySessionsController extends Controller
                 'session_date_iso'        => $s->session_date->format('Y-m-d'),
                 'lesson_type'             => $s->lesson_type,
                 'attendances_count'       => $s->attendances_count,
-                'check_in_code_expires_at' => $s->check_in_code_expires_at?->toISOString(),
+                'check_in_code_expires_at' => $s->check_in_code_expires_at?->toRfc3339String(),
             ]);
 
         $classrooms = Classroom::where('is_active', true)

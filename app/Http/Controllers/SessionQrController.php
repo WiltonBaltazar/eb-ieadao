@@ -30,7 +30,7 @@ class SessionQrController extends Controller
                 'status' => $studySession->status->value,
                 'classroom_name' => $studySession->classroom->name,
                 'check_in_code' => $studySession->check_in_code,
-                'check_in_code_expires_at' => $studySession->check_in_code_expires_at?->toISOString(),
+                'check_in_code_expires_at' => $studySession->check_in_code_expires_at?->toRfc3339String(),
             ],
             'qrSvg' => $qrSvg,
             'checkInUrl' => $checkInUrl,
