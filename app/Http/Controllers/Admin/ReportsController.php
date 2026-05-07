@@ -198,28 +198,37 @@ class ReportsController extends Controller
         if ($year) {
             $query->whereHas('session', fn ($q) => $q->whereYear('session_date', $year));
         }
+        if ($request->filled('location')) {
+            if ($request->location === 'na_igreja') {
+                $query->where(fn ($q) => $q->where('location', 'na_igreja')->orWhereNull('location'));
+            } else {
+                $query->where('location', $request->location);
+            }
+        }
 
         $attendances = $query->get();
 
-        $filename = $year ? "presencas_{$year}.xlsx" : 'presencas_todas.xlsx';
+        $filename = 'ESTUDO_BIBLICO_ICI_ACT_' . now()->format('d-m-Y') . '.xlsx';
 
         return ExcelExport::download($filename, function ($sheet) use ($attendances, $year) {
             $title = $year ? "Presenças — {$year}" : 'Todas as Presenças';
             $sheet->setCellValue('A1', $title);
+            $sheet->setCellValue('A2', ($year ? "Ano {$year}" : 'Todos os anos') . '  ·  Exportado em ' . now()->format('d/m/Y'));
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+            $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setARGB('FF64748B');
             $sheet->mergeCells('A1:H1');
-            $sheet->getRowDimension(1)->setRowHeight(20);
+            $sheet->mergeCells('A2:H2');
 
             foreach (['Nome', 'Telefone', 'Sessão', 'Data', 'Turma', 'Método', 'Localização', 'Hora'] as $i => $h) {
-                $sheet->setCellValue([$i + 1, 3], $h);
+                $sheet->setCellValue([$i + 1, 4], $h);
             }
-            ExcelExport::styleHeader($sheet, 'A3:H3');
-            $sheet->getRowDimension(3)->setRowHeight(20);
+            ExcelExport::styleHeader($sheet, 'A4:H4');
+            $sheet->getRowDimension(4)->setRowHeight(20);
 
             foreach ($attendances as $idx => $a) {
-                $row = $idx + 4;
+                $row = $idx + 5;
                 $sheet->setCellValue([1, $row], $a->student->name);
-                $sheet->setCellValue([2, $row], $a->student->phone);
+                $sheet->setCellValueExplicit([2, $row], $a->student->phone ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 $sheet->setCellValue([3, $row], $a->session->title);
                 $sheet->setCellValue([4, $row], $a->session->session_date->format('d/m/Y'));
                 $sheet->setCellValue([5, $row], $a->session->classroom->name);
@@ -280,8 +289,7 @@ class ReportsController extends Controller
             ];
         });
 
-        $suffix   = $from->format('Y-m-d') . '_' . $to->format('Y-m-d');
-        $filename = "presencas_{$suffix}.xlsx";
+        $filename = 'ESTUDO_BIBLICO_ICI_ACT_' . now()->format('d-m-Y') . '.xlsx';
 
         return ExcelExport::download($filename, function ($sheet) use ($sessions, $from, $to, $classroomId) {
             $classroomName = $classroomId ? Classroom::find($classroomId)?->name : 'Todas as turmas';
@@ -396,8 +404,7 @@ class ReportsController extends Controller
                 ];
             });
 
-        $suffix   = $from->format('Y-m-d') . '_' . $to->format('Y-m-d');
-        $filename = "alunos_presencas_{$suffix}.xlsx";
+        $filename = 'ESTUDO_BIBLICO_ICI_ACT_' . now()->format('d-m-Y') . '.xlsx';
 
         return ExcelExport::download($filename, function ($sheet) use ($students, $from, $to, $classroomId) {
             $classroomName = $classroomId ? Classroom::find($classroomId)?->name : 'Todas as turmas';
@@ -418,7 +425,7 @@ class ReportsController extends Controller
             foreach ($students as $idx => $s) {
                 $row = $idx + 5;
                 $sheet->setCellValue([1, $row], $s['name']);
-                $sheet->setCellValue([2, $row], $s['phone']);
+                $sheet->setCellValueExplicit([2, $row], $s['phone'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 $sheet->setCellValue([3, $row], $s['classroom']);
                 $sheet->setCellValue([4, $row], $s['grupo']);
                 $sheet->setCellValue([5, $row], $s['na_igreja']);
@@ -476,7 +483,7 @@ class ReportsController extends Controller
             ->orderBy('name')
             ->get();
 
-        $filename = 'ficha_presencas_' . str($classroom->name)->slug('_') . "_{$year}.xlsx";
+        $filename = 'ESTUDO_BIBLICO_ICI_ACT_' . now()->format('d-m-Y') . '.xlsx';
 
         // Load teachers on sessions for the Professores sheet
         $sessions->load('teacher');
@@ -589,12 +596,21 @@ class ReportsController extends Controller
             }
             $sheet->getRowDimension(7)->setRowHeight(15);
 
+            // ── ROW 8: DISCIPLINAS POR CÔRES (book-colour strip) ──────
+            // ICI has 4 books, each ~9 sessions. Colour the session columns
+            // in groups of 9: yellow → blue → red → green (matches EB.xlsx).
+            $bookColors = ['FFFFFF00', 'FF00B0F0', 'FFFF0000', 'FF92D050'];
+            foreach ($sessions as $i => $session) {
+                $col      = $firstCol + $i;
+                $bookIdx  = (int) ($i / 9) % count($bookColors);
+                $sheet->getStyle($coord($col) . '8')->getFill()
+                    ->setFillType($Fill)->getStartColor()->setARGB($bookColors[$bookIdx]);
+            }
+            $sheet->getRowDimension(8)->setRowHeight(5);
+
             // ── ROW 9: COLUMN HEADERS ─────────────────────────────────
             foreach (['ORD', 'NOME', 'CONTACTO', 'WA', 'Email', 'GH'] as $i => $h) {
                 $sheet->setCellValue([$i + 1, 9], $h);
-            }
-            for ($i = 0; $i < $totalSessions; $i++) {
-                $sheet->setCellValue([$firstCol + $i, 9], $i + 1);
             }
             // Summary headers
             $sheet->setCellValue([$colIgreja, 9], 'IGREJA');
@@ -633,8 +649,8 @@ class ReportsController extends Controller
                 // Fixed columns
                 $sheet->setCellValue([1, $row], $idx + 1);
                 $sheet->setCellValue([2, $row], $student->name);
-                $sheet->setCellValue([3, $row], $student->phone ?: ($student->whatsapp ?? ''));
-                $sheet->setCellValue([4, $row], $student->whatsapp ?? '');
+                $sheet->setCellValueExplicit([3, $row], $student->phone ?: ($student->whatsapp ?? ''), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                $sheet->setCellValueExplicit([4, $row], $student->whatsapp ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 $sheet->setCellValue([5, $row], $student->email ?? '');
                 $sheet->setCellValue([6, $row], $student->grupo_homogeneo?->short() ?? '');
 
@@ -642,6 +658,26 @@ class ReportsController extends Controller
                 $stripeBg = $idx % 2 === 0 ? 'FFF1F5FB' : 'FFFFFFFF';
                 $sheet->getStyle("A{$row}:F{$row}")->getFill()
                     ->setFillType($Fill)->getStartColor()->setARGB($stripeBg);
+
+                // First-presence colour: cycles every 9 sessions
+                $firstPresenceColors = [
+                    'FFC5E0B3', // session 1
+                    'FFFFFF04', // session 2
+                    'FFFFC001', // session 3
+                    'FFFBE4D5', // session 4
+                    'FF9CC2E5', // session 5
+                    'FFC55A11', // session 6
+                    'FFC8C8C8', // session 7
+                    'FF548135', // session 8
+                    'FF7030A0', // session 9
+                ];
+                $firstAttendedIdx = null;
+                foreach ($sessions as $si => $sess) {
+                    if ($attended->has($sess->id)) { $firstAttendedIdx = $si; break; }
+                }
+                $firstPColor = $firstAttendedIdx !== null
+                    ? $firstPresenceColors[$firstAttendedIdx % count($firstPresenceColors)]
+                    : null;
 
                 // Session columns
                 foreach ($sessions as $i => $session) {
@@ -665,28 +701,19 @@ class ReportsController extends Controller
                         }
 
                         $sheet->setCellValue($cellRef, 'P');
-                        if (!$firstPDone) {
-                            // First lesson: orange cell, black text
-                            $sheet->getStyle($cellRef)->getFill()
-                                ->setFillType($Fill)->getStartColor()->setARGB('FFFFC000');
-                            $sheet->getStyle($cellRef)->getFont()->getColor()->setARGB('FF000000');
-                            $firstPDone = true;
-                        } else {
-                            // Subsequent presences: white cell, black text
-                            $sheet->getStyle($cellRef)->getFill()
-                                ->setFillType($Fill)->getStartColor()->setARGB('FFFFFFFF');
-                            $sheet->getStyle($cellRef)->getFont()->getColor()->setARGB('FF000000');
-                        }
+                        $bgColor = !$firstPDone ? ($firstPColor ?? 'FFFFFFFF') : 'FFFFFFFF';
+                        $sheet->getStyle($cellRef)->getFill()
+                            ->setFillType($Fill)->getStartColor()->setARGB($bgColor);
+                        $firstPDone = true;
                     } else {
-                        // Absence: red cell, black text
+                        // Absence: red cell
                         $sheet->setCellValue($cellRef, 'F');
                         $sheet->getStyle($cellRef)->getFill()
                             ->setFillType($Fill)->getStartColor()->setARGB('FFFF0000');
-                        $sheet->getStyle($cellRef)->getFont()->getColor()->setARGB('FF000000');
                     }
 
                     $sheet->getStyle($cellRef)->applyFromArray([
-                        'font'      => ['bold' => true, 'size' => 9],
+                        'font'      => ['bold' => true, 'size' => 9, 'color' => ['argb' => 'FF000000']],
                         'alignment' => ['horizontal' => $HCenter, 'vertical' => $VCenter],
                     ]);
                 }
@@ -710,6 +737,56 @@ class ReportsController extends Controller
                     ->getColor()->setARGB('FFD1D5DB');
             }
 
+            // ── LEGEND ────────────────────────────────────────────────
+            $legendStartRow = 10 + $students->count() + 2;
+            $sheet->setCellValue("A{$legendStartRow}", 'Legenda:');
+            $sheet->getStyle("A{$legendStartRow}")->getFont()->setBold(true);
+
+            $legendItems = [
+                ['color' => 'FFC5E0B3', 'label' => 'Irmãos presentes a partir da 1ª aula (e 10ª, 19ª…)'],
+                ['color' => 'FFFFFF04', 'label' => 'Irmãos presentes só a partir da 2ª aula (e 11ª, 20ª…)'],
+                ['color' => 'FFFFC001', 'label' => 'Irmãos presentes só a partir da 3ª aula (e 12ª, 21ª…)'],
+                ['color' => 'FFFBE4D5', 'label' => 'Irmãos presentes só a partir da 4ª aula (e 13ª, 22ª…)'],
+                ['color' => 'FF9CC2E5', 'label' => 'Irmãos presentes só a partir da 5ª aula (e 14ª, 23ª…)'],
+                ['color' => 'FFC55A11', 'label' => 'Irmãos presentes só a partir da 6ª aula (e 15ª, 24ª…)'],
+                ['color' => 'FFC8C8C8', 'label' => 'Irmãos presentes só a partir da 7ª aula (e 16ª, 25ª…)'],
+                ['color' => 'FF548135', 'label' => 'Irmãos presentes só a partir da 8ª aula (e 17ª, 26ª…)'],
+                ['color' => 'FF7030A0', 'label' => 'Irmãos presentes só a partir da 9ª aula (e 18ª, 27ª…)'],
+                ['color' => 'FFFF0000', 'label' => 'Faltas contáveis a partir da primeira aula de frequência'],
+                ['color' => 'FFE8E8E8', 'label' => 'Sessões anteriores à data de matrícula (não contabilizadas)'],
+            ];
+
+            foreach ($legendItems as $j => $item) {
+                $r = $legendStartRow + 1 + $j;
+                $sampleCell = "B{$r}";
+                $descCell   = "C{$r}";
+                $value = $item['color'] === 'FFFF0000' ? 'F' : 'P';
+                $sheet->setCellValue($sampleCell, $value);
+                $sheet->getStyle($sampleCell)->applyFromArray([
+                    'font'      => ['bold' => true, 'size' => 9, 'color' => ['argb' => 'FF000000']],
+                    'alignment' => ['horizontal' => $HCenter, 'vertical' => $VCenter],
+                    'fill'      => ['fillType' => $Fill, 'startColor' => ['argb' => $item['color'] ?? 'FFFFFFFF']],
+                    'borders'   => ['outline' => ['borderStyle' => $ThinBorder, 'color' => ['argb' => 'FFD1D5DB']]],
+                ]);
+                $sheet->setCellValue($descCell, $item['label']);
+                $sheet->getStyle($descCell)->getFont()->setSize(9);
+            }
+
+            // Add session-date hints for the first few sessions
+            if ($sessions->count() >= 1) {
+                $hintRow = $legendStartRow + 1;
+                $fmt = fn ($s) => $s->session_date->format('j') . '.' . $monthPt[(int) $s->session_date->format('n')];
+                $hints = [0 => '(' . $fmt($sessions[0]) . ')'];
+                if ($sessions->count() >= 2) $hints[1] = '(' . $fmt($sessions[1]) . ')';
+                if ($sessions->count() >= 3) $hints[2] = '(' . $fmt($sessions[2]) . ')';
+                if ($sessions->count() >= 9) $hints[4] = '(' . $fmt($sessions[8]) . ')';
+                foreach ($hints as $offset => $hint) {
+                    $r = $hintRow + $offset;
+                    $existing = $sheet->getCell("C{$r}")->getValue();
+                    $sheet->setCellValue("C{$r}", $existing . ' ' . $hint);
+                }
+            }
+
             // ── FREEZE PANES ──────────────────────────────────────────
             $sheet->freezePane('G10');
 
@@ -718,6 +795,7 @@ class ReportsController extends Controller
             $sheet->getColumnDimension('B')->setWidth(28);
             $sheet->getColumnDimension('C')->setWidth(14);
             $sheet->getColumnDimension('D')->setWidth(14);
+            $sheet->getStyle('C:D')->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
             $sheet->getColumnDimension('E')->setWidth(22);
             $sheet->getColumnDimension('F')->setWidth(6);
             for ($i = 0; $i < $totalSessions; $i++) {
@@ -826,8 +904,7 @@ class ReportsController extends Controller
                 ];
             });
 
-        $yearSuffix = $year ? "_{$year}" : '';
-        $filename = 'assiduidade_' . str($classroom->name)->slug('_') . $yearSuffix . '.xlsx';
+        $filename = 'ESTUDO_BIBLICO_ICI_ACT_' . now()->format('d-m-Y') . '.xlsx';
 
         return ExcelExport::download($filename, function ($sheet) use ($classroom, $students, $totalSessions, $year) {
             // Title
@@ -854,7 +931,7 @@ class ReportsController extends Controller
             foreach ($students as $idx => $s) {
                 $row = $idx + 5;
                 $sheet->setCellValue([1, $row], $s['name']);
-                $sheet->setCellValue([2, $row], $s['phone']);
+                $sheet->setCellValueExplicit([2, $row], $s['phone'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 $sheet->setCellValue([3, $row], $s['grupo']);
                 $sheet->setCellValue([4, $row], $s['attended']);
                 $sheet->setCellValue([5, $row], $s['total']);

@@ -36,7 +36,7 @@ function CountdownBadge({ expiresAt }: { expiresAt: string }) {
         : 'bg-amber-50 border border-amber-200 text-amber-700'
       }`}>
       <Clock className="h-4 w-4" />
-      Expira em <span className="text-lg font-bold">{timeLeft}</span>
+      {timeLeft === 'Expirado' ? 'Expirado' : <>Expira em <span className="text-lg font-bold">{timeLeft}</span></>}
     </div>
   );
 }

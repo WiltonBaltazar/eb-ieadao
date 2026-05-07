@@ -213,6 +213,13 @@ class StudySessionsController extends Controller
                 $q->where('grupo_homogeneo', $request->grupo_homogeneo)
             );
         }
+        if ($request->filled('location')) {
+            if ($request->location === 'na_igreja') {
+                $attendedQuery->where(fn ($q) => $q->where('location', 'na_igreja')->orWhereNull('location'));
+            } else {
+                $attendedQuery->where('location', $request->location);
+            }
+        }
 
         $sortable = ['name', 'phone', 'check_in_method', 'checked_in_at'];
         $sortBy = $request->input('sort_by');
@@ -294,7 +301,7 @@ class StudySessionsController extends Controller
             'notAttended'   => $notAttended,
             'gruposOptions' => collect(GrupoHomogeneo::cases())
                 ->map(fn ($g) => ['value' => $g->value, 'label' => $g->label()]),
-            'filters'       => $request->only(['search', 'grupo_homogeneo', 'sort_by', 'sort_dir', 'per_page']),
+            'filters'       => $request->only(['search', 'grupo_homogeneo', 'location', 'sort_by', 'sort_dir', 'per_page']),
         ]);
     }
 
@@ -543,30 +550,26 @@ class StudySessionsController extends Controller
             ->select('attendances.*')
             ->get();
 
-        $filename = 'presencas_' . str($studySession->title)->slug('_') . '_' . $studySession->session_date->format('Y-m-d') . '.xlsx';
+        $filename = 'ESTUDO_BIBLICO_ICI_ACT_' . now()->format('d-m-Y') . '.xlsx';
 
         return ExcelExport::download($filename, function ($sheet) use ($studySession, $attendances) {
-            // Title
             $sheet->setCellValue('A1', 'Presenças — ' . $studySession->title);
-            $sheet->setCellValue('A2', $studySession->classroom->name . ' · ' . $studySession->session_date->format('d/m/Y'));
+            $sheet->setCellValue('A2', $studySession->classroom->name . '  ·  ' . $studySession->session_date->format('d/m/Y') . '  ·  Exportado em ' . now()->format('d/m/Y'));
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
             $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setARGB('FF64748B');
             $sheet->mergeCells('A1:F1');
             $sheet->mergeCells('A2:F2');
 
-            // Headers
-            $headers = ['Nome', 'Telefone', 'Grupo Homogéneo', 'Método', 'Hora', 'Marcado por'];
-            foreach ($headers as $i => $h) {
+            foreach (['Nome', 'Telefone', 'Grupo Homogéneo', 'Método', 'Hora', 'Marcado por'] as $i => $h) {
                 $sheet->setCellValue([$i + 1, 4], $h);
             }
             ExcelExport::styleHeader($sheet, 'A4:F4');
             $sheet->getRowDimension(4)->setRowHeight(22);
 
-            // Data
             foreach ($attendances as $idx => $a) {
                 $row = $idx + 5;
                 $sheet->setCellValue([1, $row], $a->student->name);
-                $sheet->setCellValue([2, $row], $a->student->phone ?? '');
+                $sheet->setCellValueExplicit([2, $row], $a->student->phone ?? '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 $sheet->setCellValue([3, $row], $a->student->grupo_homogeneo?->label() ?? '');
                 $sheet->setCellValue([4, $row], $a->check_in_method->label());
                 $sheet->setCellValue([5, $row], $a->checked_in_at->format('H:i'));
@@ -574,12 +577,10 @@ class StudySessionsController extends Controller
                 ExcelExport::styleData($sheet, "A{$row}:F{$row}", $idx % 2 === 0);
             }
 
-            // Summary row
             $sumRow = $attendances->count() + 5;
             $sheet->setCellValue("A{$sumRow}", 'Total: ' . $attendances->count() . ' presenças');
             $sheet->getStyle("A{$sumRow}")->getFont()->setBold(true);
 
-            // Column widths
             foreach ([['A', 30], ['B', 16], ['C', 30], ['D', 14], ['E', 10], ['F', 22]] as [$col, $width]) {
                 $sheet->getColumnDimension($col)->setWidth($width);
             }
