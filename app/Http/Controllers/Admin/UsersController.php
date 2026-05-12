@@ -134,7 +134,7 @@ class UsersController extends Controller
             ->pluck('id');
 
         // Total = required sessions ∪ any attended before the cutoff (don't hide early attendances)
-        $totalAll = $requiredIds->union($attendedIds)->unique()->count();
+        $totalAll = $requiredIds->concat($attendedIds)->unique()->count();
         $rate = $totalAll > 0 ? round(($attendedAll / $totalAll) * 100) : 0;
 
         $sortable = ['title', 'session_date'];
