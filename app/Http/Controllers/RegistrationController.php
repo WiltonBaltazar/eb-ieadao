@@ -49,13 +49,14 @@ class RegistrationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:50|unique:users,phone',
+            'phone' => 'required|string|max:20|regex:/^\+[1-9]\d{6,14}$/|unique:users,phone',
             'alt_contact' => 'nullable|string|max:255',
             'grupo_homogeneo' => 'required|in:' . implode(',', array_column(GrupoHomogeneo::cases(), 'value')),
             'classroom_id' => 'required|exists:classrooms,id',
         ], [
             'name.required' => 'O nome é obrigatório.',
             'phone.required' => 'O número de telefone é obrigatório.',
+            'phone.regex' => 'Seleciona o indicativo do país e indica o número de telefone.',
             'phone.unique' => 'Este número de telefone já está registado.',
             'grupo_homogeneo.required' => 'O grupo homogéneo é obrigatório.',
             'classroom_id.required' => 'A turma é obrigatória.',
@@ -116,13 +117,14 @@ class RegistrationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:50|unique:users,phone',
+            'phone' => 'required|string|max:20|regex:/^\+[1-9]\d{6,14}$/|unique:users,phone',
             'alt_contact' => 'nullable|string|max:255',
             'grupo_homogeneo' => 'required|in:' . implode(',', array_column(GrupoHomogeneo::cases(), 'value')),
             'classroom_id' => 'required|exists:classrooms,id',
         ], [
             'name.required' => 'O nome é obrigatório.',
             'phone.required' => 'O número de telefone é obrigatório.',
+            'phone.regex' => 'Seleciona o indicativo do país e indica o número de telefone.',
             'phone.unique' => 'Este número de telefone já está registado.',
             'grupo_homogeneo.required' => 'O grupo homogéneo é obrigatório.',
             'classroom_id.required' => 'A turma é obrigatória.',
