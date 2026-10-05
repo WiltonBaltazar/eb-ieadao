@@ -53,40 +53,16 @@ class StudentAttendanceController extends Controller
             'session_url' => route('student.aula.show', $a->session),
         ]);
 
-        // Calculate streak
-        $streak = $this->calculateStreak($user);
+        $streak = $user->attendanceStreak();
 
         return Inertia::render('MinhasPresencas', [
             'attendances' => $attendances,
             'stats' => [
                 ...$ratio,
-                'streak' => $streak,
+                'streak' => $streak['current'],
+                'best_streak' => $streak['best'],
             ],
             'filters' => $request->only(['search', 'sort_by', 'sort_dir', 'per_page']),
         ]);
-    }
-
-    private function calculateStreak($user): int
-    {
-        $sessions = $user->attendances()
-            ->with('session')
-            ->get()
-            ->pluck('session.session_date')
-            ->sort()
-            ->values();
-
-        if ($sessions->isEmpty()) return 0;
-
-        $streak = 1;
-        for ($i = $sessions->count() - 1; $i > 0; $i--) {
-            $diff = $sessions[$i]->diffInDays($sessions[$i - 1]);
-            if ($diff <= 7) {
-                $streak++;
-            } else {
-                break;
-            }
-        }
-
-        return $streak;
     }
 }

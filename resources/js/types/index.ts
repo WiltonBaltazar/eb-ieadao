@@ -131,7 +131,7 @@ export interface MeuPerfilPageProps extends PageProps {
 
 export interface MinhasPresencasPageProps extends PageProps {
   attendances: PaginatedData<AttendanceRecord>;
-  stats: { attended: number; total: number; rate: number; streak: number };
+  stats: { attended: number; total: number; rate: number; streak: number; best_streak: number };
 }
 
 export interface EditarPerfilPageProps extends PageProps {
