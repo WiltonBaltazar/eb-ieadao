@@ -47,6 +47,10 @@ class RegistrationController extends Controller
 
     public function storeGeneral(Request $request): RedirectResponse
     {
+        if (is_string($request->phone)) {
+            $request->merge(['phone' => User::normalizePhone($request->phone)]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => [
@@ -119,6 +123,10 @@ class RegistrationController extends Controller
 
     public function store(Request $request, StudySession $studySession): RedirectResponse
     {
+        if (is_string($request->phone)) {
+            $request->merge(['phone' => User::normalizePhone($request->phone)]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => [

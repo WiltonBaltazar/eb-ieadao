@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/Components/ui/select';
 import { RegistarPageProps } from '@/types';
-import { COUNTRIES, flagEmoji, splitPhone } from '@/lib/countries';
+import { COUNTRIES, flagEmoji, joinPhone, splitPhone } from '@/lib/countries';
 
 export default function Registar({
   studySession,
@@ -37,7 +37,7 @@ export default function Registar({
   });
 
   const updatePhone = (dial: string, number: string) => {
-    setData('phone', number ? `${dial}${number}` : '');
+    setData('phone', joinPhone(dial, number));
   };
 
   const handlePhoneCountryChange = (dial: string) => {

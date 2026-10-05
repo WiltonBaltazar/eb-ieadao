@@ -75,6 +75,22 @@ class StudentAuthTest extends TestCase
         $this->assertAuthenticatedAs($student);
     }
 
+    public function test_student_can_login_with_doubled_country_prefix(): void
+    {
+        $classroom = Classroom::factory()->create();
+        $student = User::factory()->create([
+            'role' => 'student',
+            'phone' => '827622902',
+            'email' => null,
+            'password' => null,
+            'classroom_id' => $classroom->id,
+        ]);
+
+        $response = $this->post('/entrar', ['phone' => '+258258827622902']);
+        $response->assertRedirect('/meu-perfil');
+        $this->assertAuthenticatedAs($student);
+    }
+
     public function test_login_redirects_unknown_phone_to_registration(): void
     {
         $response = $this->post('/entrar', ['phone' => '999000000']);

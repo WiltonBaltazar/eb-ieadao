@@ -107,6 +107,19 @@ class RegistrationTest extends TestCase
         $this->assertSame(1, User::where('phone', 'like', '%842550315')->count());
     }
 
+    public function test_registration_drops_doubled_country_prefix(): void
+    {
+        $this->post("/registar/{$this->session->id}", [
+            'name' => 'Novo Estudante',
+            'phone' => '+258258827622902',
+            'grupo_homogeneo' => 'homens',
+            'classroom_id' => $this->classroom->id,
+        ]);
+
+        $this->assertDatabaseHas('users', ['phone' => '+258827622902']);
+        $this->assertDatabaseMissing('users', ['phone' => '+258258827622902']);
+    }
+
     public function test_registration_fails_with_phone_missing_country_code(): void
     {
         $response = $this->post("/registar/{$this->session->id}", [

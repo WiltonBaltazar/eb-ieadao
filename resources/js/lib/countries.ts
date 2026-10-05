@@ -69,6 +69,22 @@ export function flagEmoji(iso2: string): string {
 }
 
 /**
+ * Joins a dial code and the typed number. If the number already starts with the
+ * country code (e.g. "258841234567" typed with +258 selected), the repeated code
+ * is dropped so the result isn't "+258258841234567".
+ */
+export function joinPhone(dial: string, number: string): string {
+  if (!number) return '';
+
+  const code = dial.replace(/\D/g, '');
+  const local = number.startsWith(code) && number.length - code.length >= 7
+    ? number.slice(code.length)
+    : number;
+
+  return `${dial}${local}`;
+}
+
+/**
  * Splits a stored phone (e.g. "+258841234567") into its dial code and local
  * number, matching against the known list of dial codes. Falls back to the
  * default country when no prefix matches (e.g. legacy numbers with no "+").

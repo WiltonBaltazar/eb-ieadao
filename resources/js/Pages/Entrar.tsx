@@ -12,7 +12,7 @@ import {
 } from '@/Components/ui/select';
 import { Phone, AlertCircle } from 'lucide-react';
 import { EntrarPageProps } from '@/types';
-import { COUNTRIES, DEFAULT_COUNTRY, flagEmoji } from '@/lib/countries';
+import { COUNTRIES, DEFAULT_COUNTRY, flagEmoji, joinPhone } from '@/lib/countries';
 
 export default function Entrar({ errors }: EntrarPageProps) {
   const [phoneCountry, setPhoneCountry] = useState(DEFAULT_COUNTRY.dial);
@@ -21,7 +21,7 @@ export default function Entrar({ errors }: EntrarPageProps) {
   const { data, setData, post, processing } = useForm({ phone: '', phone_local: '' });
 
   const updatePhone = (dial: string, number: string) => {
-    setData({ phone: number ? `${dial}${number}` : '', phone_local: number });
+    setData({ phone: joinPhone(dial, number), phone_local: number });
   };
 
   const handlePhoneCountryChange = (dial: string) => {

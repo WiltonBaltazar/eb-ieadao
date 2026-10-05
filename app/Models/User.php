@@ -129,6 +129,11 @@ class User extends Authenticatable
             return [trim($phone)];
         }
 
+        // "258258842550315": country code typed again after selecting +258
+        if (strlen($digits) === 15 && str_starts_with($digits, '258258')) {
+            $digits = substr($digits, 3);
+        }
+
         $variants = [trim($phone), $digits, '+' . $digits];
 
         if (strlen($digits) === 12 && str_starts_with($digits, '258')) {
@@ -139,6 +144,14 @@ class User extends Authenticatable
         }
 
         return array_values(array_unique($variants));
+    }
+
+    // Drop a repeated Mozambican country code: "+258258842550315" -> "+258842550315"
+    public static function normalizePhone(string $phone): string
+    {
+        $phone = trim($phone);
+
+        return preg_match('/^\+258(258\d{9})$/', $phone, $m) ? '+' . $m[1] : $phone;
     }
 
     public function scopeMatchingPhone($query, string $phone)
