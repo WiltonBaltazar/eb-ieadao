@@ -9,6 +9,7 @@ use App\Models\Enrollment;
 use App\Models\Setting;
 use App\Models\StudySession;
 use App\Models\User;
+use App\Services\PastorReportService;
 use App\Support\ExcelExport;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -450,6 +451,19 @@ class ReportsController extends Controller
                     ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             }
         });
+    }
+
+    public function exportPastorReport(Request $request, PastorReportService $report): BinaryFileResponse
+    {
+        $request->validate([
+            'year'     => 'nullable|integer|min:2000|max:2100',
+            'min_rate' => 'nullable|integer|min:0|max:100',
+        ]);
+
+        $year    = $request->filled('year') ? (int) $request->year : Setting::currentAcademicYear();
+        $minRate = $request->filled('min_rate') ? (int) $request->min_rate : 30;
+
+        return $report->download($year, $minRate);
     }
 
     public function exportMapaPresencasExcel(Request $request, Classroom $classroom): BinaryFileResponse

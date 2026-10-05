@@ -128,6 +128,7 @@ Route::middleware(['role:admin,teacher'])->prefix('admin')->group(function () {
     Route::get('/relatorios/turma/{classroom}/exportar-mapa', [ReportsController::class, 'exportMapaPresencasExcel'])->name('admin.reports.export-mapa');
     Route::get('/relatorios/periodo/exportar-excel', [ReportsController::class, 'exportPeriodExcel'])->name('admin.reports.export-period');
     Route::get('/relatorios/periodo/exportar-excel-alunos', [ReportsController::class, 'exportStudentsPeriodExcel'])->name('admin.reports.export-period-students');
+    Route::get('/relatorios/pastor/exportar-excel', [ReportsController::class, 'exportPastorReport'])->name('admin.reports.export-pastor');
 });
 
 // Admin only settings

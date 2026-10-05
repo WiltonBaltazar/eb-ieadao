@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/Components/ui/select';
 import { RegistarPageProps } from '@/types';
+import { COUNTRIES, flagEmoji, splitPhone } from '@/lib/countries';
 
 export default function Registar({
   studySession,
@@ -23,6 +24,10 @@ export default function Registar({
   gruposOptions,
   errors,
 }: RegistarPageProps) {
+  const initialPhone = splitPhone(prefillPhone ?? '');
+  const [phoneCountry, setPhoneCountry] = useState(initialPhone.dial);
+  const [phoneNumber, setPhoneNumber] = useState(initialPhone.number);
+
   const { data, setData, post, processing } = useForm({
     name: '',
     phone: prefillPhone ?? '',
@@ -30,6 +35,21 @@ export default function Registar({
     grupo_homogeneo: '',
     classroom_id: studySession?.classroom_id ? String(studySession.classroom_id) : '',
   });
+
+  const updatePhone = (dial: string, number: string) => {
+    setData('phone', number ? `${dial}${number}` : '');
+  };
+
+  const handlePhoneCountryChange = (dial: string) => {
+    setPhoneCountry(dial);
+    updatePhone(dial, phoneNumber);
+  };
+
+  const handlePhoneNumberChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '');
+    setPhoneNumber(digits);
+    updatePhone(phoneCountry, digits);
+  };
 
   const handleSubmit: FormEventHandler = (e) => {
     e.preventDefault();
@@ -79,14 +99,32 @@ export default function Registar({
 
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone / WhatsApp *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={data.phone}
-                  onChange={(e) => setData('phone', e.target.value)}
-                  placeholder="Ex: 841234567 ou +44123456789"
-                  className={errors?.phone ? 'border-red-500' : ''}
-                />
+                <p className="text-xs text-slate-500">
+                  Confirma o indicativo do país antes de escreveres o número.
+                </p>
+                <div className="flex gap-2">
+                  <Select value={phoneCountry} onValueChange={handlePhoneCountryChange}>
+                    <SelectTrigger className={`w-[112px] shrink-0 ${errors?.phone ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder="+258" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c.iso2} value={c.dial}>
+                          {flagEmoji(c.iso2)} {c.dial}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={phoneNumber}
+                    onChange={(e) => handlePhoneNumberChange(e.target.value)}
+                    placeholder="841234567"
+                    className={errors?.phone ? 'border-red-500' : ''}
+                  />
+                </div>
                 {errors?.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
               </div>
 

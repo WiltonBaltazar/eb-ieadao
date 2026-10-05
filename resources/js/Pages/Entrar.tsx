@@ -1,13 +1,39 @@
 import { Head, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState } from 'react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/Components/ui/select';
 import { Phone, AlertCircle } from 'lucide-react';
 import { EntrarPageProps } from '@/types';
+import { COUNTRIES, DEFAULT_COUNTRY, flagEmoji } from '@/lib/countries';
 
 export default function Entrar({ errors }: EntrarPageProps) {
+  const [phoneCountry, setPhoneCountry] = useState(DEFAULT_COUNTRY.dial);
+  const [phoneNumber, setPhoneNumber] = useState('');
+
   const { data, setData, post, processing } = useForm({ phone: '' });
+
+  const updatePhone = (dial: string, number: string) => {
+    setData('phone', number ? `${dial}${number}` : '');
+  };
+
+  const handlePhoneCountryChange = (dial: string) => {
+    setPhoneCountry(dial);
+    updatePhone(dial, phoneNumber);
+  };
+
+  const handlePhoneNumberChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '');
+    setPhoneNumber(digits);
+    updatePhone(phoneCountry, digits);
+  };
 
   const handleSubmit: FormEventHandler = (e) => {
     e.preventDefault();
@@ -47,15 +73,33 @@ export default function Entrar({ errors }: EntrarPageProps) {
                 <label htmlFor="phone" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                   Telefone
                 </label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="Ex: 841234567 ou +44123456789"
-                  value={data.phone}
-                  onChange={(e) => setData('phone', e.target.value)}
-                  autoFocus
-                  className={`h-11 rounded-xl border-slate-200 focus:border-brand-primary focus:ring-brand-primary/20 ${errors?.phone ? 'border-red-400' : ''}`}
-                />
+                <p className="text-xs text-slate-400">
+                  Confirma o indicativo do país antes de escreveres o número.
+                </p>
+                <div className="flex gap-2">
+                  <Select value={phoneCountry} onValueChange={handlePhoneCountryChange}>
+                    <SelectTrigger className={`h-11 w-[112px] shrink-0 rounded-xl border-slate-200 focus:border-brand-primary focus:ring-brand-primary/20 ${errors?.phone ? 'border-red-400' : ''}`}>
+                      <SelectValue placeholder="+258" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRIES.map((c) => (
+                        <SelectItem key={c.iso2} value={c.dial}>
+                          {flagEmoji(c.iso2)} {c.dial}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="841234567"
+                    value={phoneNumber}
+                    onChange={(e) => handlePhoneNumberChange(e.target.value)}
+                    autoFocus
+                    className={`h-11 rounded-xl border-slate-200 focus:border-brand-primary focus:ring-brand-primary/20 ${errors?.phone ? 'border-red-400' : ''}`}
+                  />
+                </div>
               </div>
 
               <Button

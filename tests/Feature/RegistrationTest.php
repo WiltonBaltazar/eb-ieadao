@@ -37,8 +37,8 @@ class RegistrationTest extends TestCase
     {
         $response = $this->post("/registar/{$this->session->id}", [
             'name' => 'Novo Estudante',
-            'phone' => '912888888',
-            'whatsapp' => '912888888',
+            'phone' => '+258912888888',
+            'whatsapp' => '+258912888888',
             'alt_contact' => null,
             'grupo_homogeneo' => 'homens',
             'classroom_id' => $this->classroom->id,
@@ -48,7 +48,7 @@ class RegistrationTest extends TestCase
         $response->assertRedirect('/meu-perfil');
 
         $this->assertDatabaseHas('users', [
-            'phone' => '912888888',
+            'phone' => '+258912888888',
             'role' => 'student',
             'classroom_id' => $this->classroom->id,
         ]);
@@ -71,12 +71,24 @@ class RegistrationTest extends TestCase
     public function test_registration_fails_with_duplicate_phone(): void
     {
         User::factory()->create([
-            'phone' => '912777777',
+            'phone' => '+258912777777',
             'role' => 'student',
             'email' => null,
             'password' => null,
         ]);
 
+        $response = $this->post("/registar/{$this->session->id}", [
+            'name' => 'Outro Estudante',
+            'phone' => '+258912777777',
+            'grupo_homogeneo' => 'homens',
+            'classroom_id' => $this->classroom->id,
+        ]);
+
+        $response->assertSessionHasErrors('phone');
+    }
+
+    public function test_registration_fails_with_phone_missing_country_code(): void
+    {
         $response = $this->post("/registar/{$this->session->id}", [
             'name' => 'Outro Estudante',
             'phone' => '912777777',
@@ -91,7 +103,7 @@ class RegistrationTest extends TestCase
     {
         $this->post("/registar/{$this->session->id}", [
             'name' => 'Test User',
-            'phone' => '912666666',
+            'phone' => '+258912666666',
             'whatsapp' => '',
             'grupo_homogeneo' => 'senhoras',
             'classroom_id' => $this->classroom->id,
@@ -99,8 +111,8 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('users', [
-            'phone' => '912666666',
-            'whatsapp' => '912666666',
+            'phone' => '+258912666666',
+            'whatsapp' => '+258912666666',
         ]);
     }
 }
