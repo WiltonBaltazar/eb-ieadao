@@ -13,7 +13,7 @@ import { TablePagination } from '@/Components/AdminTable';
 
 interface Props extends PageProps {
   attendances: PaginatedData<AttendanceRecord>;
-  stats: { attended: number; missed: number; total: number; rate: number; streak: number };
+  stats: { attended: number; missed: number; total: number; rate: number; streak: number; best_streak: number };
   filters: Record<string, string>;
 }
 
@@ -112,6 +112,7 @@ export default function MinhasPresencas({ attendances, stats, filters }: Props) 
             </div>
             <p className="text-2xl font-bold text-slate-800 tabular-nums">{stats.streak}</p>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mt-0.5">Sequência</p>
+            <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">Melhor: {stats.best_streak}</p>
           </div>
         </div>
 
