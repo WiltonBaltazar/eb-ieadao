@@ -353,7 +353,7 @@ class UsersController extends Controller
             $phone = $phone !== '' ? $phone : null;
 
             // Skip if phone already registered
-            if ($phone !== null && User::where('phone', $phone)->exists()) {
+            if ($phone !== null && User::matchingPhone($phone)->exists()) {
                 $skipped++;
                 continue;
             }
@@ -536,7 +536,7 @@ class UsersController extends Controller
             }
             $enrolledAt = $firstPDate ?? now();
 
-            $existing = $phone !== null ? User::where('phone', $phone)->first() : null;
+            $existing = $phone !== null ? User::matchingPhone($phone)->first() : null;
 
             if ($existing) {
                 $existing->update([

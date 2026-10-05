@@ -487,7 +487,7 @@ class StudySessionsController extends Controller
                 : null;
 
             // Find or create student
-            $student = User::where('phone', $phone)->first();
+            $student = User::matchingPhone($phone)->first();
             if (!$student) {
                 $student = User::create([
                     'name'            => $name,

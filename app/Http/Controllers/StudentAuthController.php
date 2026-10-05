@@ -18,14 +18,20 @@ class StudentAuthController extends Controller
 
     public function login(Request $request): RedirectResponse
     {
-        $request->validate(['phone' => 'required|string']);
+        $request->validate([
+            'phone' => 'required|string',
+            'phone_local' => 'nullable|string',
+        ]);
 
-        $phone = trim($request->phone);
-        $altPhone = str_starts_with($phone, '+') ? ltrim($phone, '+') : '+' . $phone;
-
-        $user = User::whereIn('phone', [$phone, $altPhone])
-            ->whereIn('role', ['student', 'teacher'])
-            ->first();
+        // Try the full number (with country prefix) first, then the number as typed
+        // without prefix, for accounts saved before the country selector existed
+        $user = collect([$request->phone, $request->phone_local])
+            ->filter()
+            ->unique()
+            ->map(fn ($phone) => User::matchingPhone($phone)
+                ->whereIn('role', ['student', 'teacher'])
+                ->first())
+            ->first(fn ($user) => $user !== null);
 
         if (!$user) {
             return redirect()->route('registration.general', ['phone' => $request->phone]);

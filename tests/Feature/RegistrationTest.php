@@ -87,6 +87,26 @@ class RegistrationTest extends TestCase
         $response->assertSessionHasErrors('phone');
     }
 
+    public function test_registration_fails_when_phone_exists_in_legacy_local_format(): void
+    {
+        User::factory()->create([
+            'phone' => '842550315',
+            'role' => 'student',
+            'email' => null,
+            'password' => null,
+        ]);
+
+        $response = $this->post("/registar/{$this->session->id}", [
+            'name' => 'Outro Estudante',
+            'phone' => '+258842550315',
+            'grupo_homogeneo' => 'homens',
+            'classroom_id' => $this->classroom->id,
+        ]);
+
+        $response->assertSessionHasErrors('phone');
+        $this->assertSame(1, User::where('phone', 'like', '%842550315')->count());
+    }
+
     public function test_registration_fails_with_phone_missing_country_code(): void
     {
         $response = $this->post("/registar/{$this->session->id}", [

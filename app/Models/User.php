@@ -116,6 +116,36 @@ class User extends Authenticatable
         return $this->readiness()->label();
     }
 
+    // Match a phone regardless of format: "+258842550315", "258842550315" and the
+    // legacy local "842550315" (pre country-selector Mozambican numbers) are the same number
+    public static function phoneVariants(string $phone): array
+    {
+        $digits = preg_replace('/\D/', '', $phone);
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
+        }
+
+        if ($digits === '') {
+            return [trim($phone)];
+        }
+
+        $variants = [trim($phone), $digits, '+' . $digits];
+
+        if (strlen($digits) === 12 && str_starts_with($digits, '258')) {
+            $variants[] = substr($digits, 3);
+        } elseif (strlen($digits) === 9 && str_starts_with($digits, '8')) {
+            $variants[] = '258' . $digits;
+            $variants[] = '+258' . $digits;
+        }
+
+        return array_values(array_unique($variants));
+    }
+
+    public function scopeMatchingPhone($query, string $phone)
+    {
+        return $query->whereIn('phone', self::phoneVariants($phone));
+    }
+
     // Attendance stats (scoped to a specific academic year)
     public function attendanceRatio(?int $year = null): array
     {
