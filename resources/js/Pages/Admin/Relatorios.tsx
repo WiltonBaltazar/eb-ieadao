@@ -98,6 +98,10 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
   const [mapaYear, setMapaYear] = useState<string>(
     availableYears.length > 0 ? String(availableYears[0]) : String(new Date().getFullYear())
   );
+  const [pastorYear, setPastorYear] = useState<string>(
+    availableYears.length > 0 ? String(availableYears[0]) : String(new Date().getFullYear())
+  );
+  const [pastorMinRate, setPastorMinRate] = useState<string>('30');
   const [compare, setCompare] = useState(false);
   const [chartData, setChartData] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(false);
@@ -242,6 +246,58 @@ export default function Relatorios({ belowThreshold, threshold, classrooms, avai
                     </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Relatório do Pastor */}
+            <Card className="border-violet-200/60">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Relatório do Pastor</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Ano</Label>
+                    <Select value={pastorYear} onValueChange={setPastorYear}>
+                      <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {availableYears.map((y) => (
+                          <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Taxa mínima (%)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={pastorMinRate}
+                      onChange={(e) => setPastorMinRate(e.target.value)}
+                      className="h-8 w-24"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-violet-700 border-violet-300 hover:bg-violet-50 gap-1.5"
+                    disabled={downloading}
+                    onClick={() => {
+                      const params = new URLSearchParams({ year: pastorYear });
+                      if (pastorMinRate !== '') params.set('min_rate', pastorMinRate);
+                      handleDownload(`/admin/relatorios/pastor/exportar-excel?${params}`);
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    Exportar Relatório do Pastor
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">
+                  Um ficheiro Excel com 5 folhas: alunos Online, alunos Na Igreja, Online acima da taxa mínima,
+                  Na Igreja acima da taxa mínima, e todos os alunos com a respetiva taxa de presença.
+                  A modalidade de cada aluno é definida pela maioria das suas presenças no ano.
+                </p>
               </CardContent>
             </Card>
 
