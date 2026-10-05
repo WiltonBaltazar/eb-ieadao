@@ -27,6 +27,54 @@ class StudentAuthTest extends TestCase
         $this->assertAuthenticatedAs($student);
     }
 
+    public function test_student_with_legacy_local_phone_can_login_with_country_prefix(): void
+    {
+        $classroom = Classroom::factory()->create();
+        $student = User::factory()->create([
+            'role' => 'student',
+            'phone' => '842550315',
+            'email' => null,
+            'password' => null,
+            'classroom_id' => $classroom->id,
+        ]);
+
+        $response = $this->post('/entrar', ['phone' => '+258842550315']);
+        $response->assertRedirect('/meu-perfil');
+        $this->assertAuthenticatedAs($student);
+    }
+
+    public function test_student_with_prefixed_phone_can_login_with_local_number(): void
+    {
+        $classroom = Classroom::factory()->create();
+        $student = User::factory()->create([
+            'role' => 'student',
+            'phone' => '+258842550315',
+            'email' => null,
+            'password' => null,
+            'classroom_id' => $classroom->id,
+        ]);
+
+        $response = $this->post('/entrar', ['phone' => '842550315']);
+        $response->assertRedirect('/meu-perfil');
+        $this->assertAuthenticatedAs($student);
+    }
+
+    public function test_student_with_unprefixed_foreign_phone_can_login_with_country_prefix(): void
+    {
+        $classroom = Classroom::factory()->create();
+        $student = User::factory()->create([
+            'role' => 'student',
+            'phone' => '911000001',
+            'email' => null,
+            'password' => null,
+            'classroom_id' => $classroom->id,
+        ]);
+
+        $response = $this->post('/entrar', ['phone' => '+351911000001', 'phone_local' => '911000001']);
+        $response->assertRedirect('/meu-perfil');
+        $this->assertAuthenticatedAs($student);
+    }
+
     public function test_login_redirects_unknown_phone_to_registration(): void
     {
         $response = $this->post('/entrar', ['phone' => '999000000']);

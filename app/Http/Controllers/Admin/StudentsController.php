@@ -97,7 +97,7 @@ class StudentsController extends Controller
         foreach ($request->rows as $i => $row) {
             try {
                 DB::transaction(function () use ($row, $classroomId, $year, $enrolledBy, &$created, &$updated) {
-                    $existing = User::where('phone', $row['telefone'])->first();
+                    $existing = User::matchingPhone($row['telefone'])->first();
 
                     if ($existing) {
                         $existing->update([

@@ -18,10 +18,10 @@ export default function Entrar({ errors }: EntrarPageProps) {
   const [phoneCountry, setPhoneCountry] = useState(DEFAULT_COUNTRY.dial);
   const [phoneNumber, setPhoneNumber] = useState('');
 
-  const { data, setData, post, processing } = useForm({ phone: '' });
+  const { data, setData, post, processing } = useForm({ phone: '', phone_local: '' });
 
   const updatePhone = (dial: string, number: string) => {
-    setData('phone', number ? `${dial}${number}` : '');
+    setData({ phone: number ? `${dial}${number}` : '', phone_local: number });
   };
 
   const handlePhoneCountryChange = (dial: string) => {
