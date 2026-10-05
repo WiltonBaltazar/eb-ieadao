@@ -129,6 +129,9 @@ class User extends Authenticatable
             return [trim($phone)];
         }
 
+        // "258258842550315": country code typed again after selecting +258
+        $digits = self::dropRepeatedCountryCode($digits);
+
         $variants = [trim($phone), $digits, '+' . $digits];
 
         if (strlen($digits) === 12 && str_starts_with($digits, '258')) {
@@ -139,6 +142,45 @@ class User extends Authenticatable
         }
 
         return array_values(array_unique($variants));
+    }
+
+    // Drop a country code typed again after selecting it: "+258258842550315" -> "+258842550315"
+    public static function normalizePhone(string $phone): string
+    {
+        $phone = trim($phone);
+
+        if (!preg_match('/^\+(\d+)$/', $phone, $m)) {
+            return $phone;
+        }
+
+        return '+' . self::dropRepeatedCountryCode($m[1]);
+    }
+
+    // Only drops the code when the number is too long for that country but fits
+    // without it, so real numbers starting with the code (French "+33 3…") are kept.
+    // Lengths are shared with the country selector (resources/js/lib/phone-max-lengths.json)
+    private static function dropRepeatedCountryCode(string $digits): string
+    {
+        static $maxLengths = null;
+        $maxLengths ??= json_decode(file_get_contents(resource_path('js/lib/phone-max-lengths.json')), true);
+
+        foreach ([3, 2, 1] as $codeLength) {
+            $code = substr($digits, 0, $codeLength);
+            if (!isset($maxLengths[$code])) {
+                continue;
+            }
+
+            $national = substr($digits, $codeLength);
+            $max = $maxLengths[$code];
+
+            return str_starts_with($national, $code)
+                && strlen($national) > $max
+                && strlen($national) - $codeLength <= $max
+                ? $code . substr($national, $codeLength)
+                : $digits;
+        }
+
+        return $digits;
     }
 
     public function scopeMatchingPhone($query, string $phone)

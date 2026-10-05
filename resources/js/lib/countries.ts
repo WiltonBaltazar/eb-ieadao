@@ -1,3 +1,5 @@
+import PHONE_MAX_LENGTHS from './phone-max-lengths.json';
+
 export interface CountryDialCode {
   iso2: string;
   name: string;
@@ -66,6 +68,26 @@ export function flagEmoji(iso2: string): string {
   return iso2
     .toUpperCase()
     .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)));
+}
+
+/**
+ * Joins a dial code and the typed number. If the country code was typed again
+ * (e.g. "258841234567" with +258 selected), it is dropped so the result isn't
+ * "+258258841234567". The code is only dropped when the number is too long to
+ * be valid for that country but fits without it, so real numbers that happen
+ * to start with the code (e.g. French "33…") are kept.
+ */
+export function joinPhone(dial: string, number: string): string {
+  if (!number) return '';
+
+  const code = dial.replace(/\D/g, '');
+  const maxLength = (PHONE_MAX_LENGTHS as Record<string, number>)[code];
+  const isRepeated = maxLength !== undefined
+    && number.startsWith(code)
+    && number.length > maxLength
+    && number.length - code.length <= maxLength;
+
+  return `${dial}${isRepeated ? number.slice(code.length) : number}`;
 }
 
 /**
