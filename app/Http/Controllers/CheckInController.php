@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\AttendanceLocation;
 use App\Exceptions\AttendanceException;
 use App\Exceptions\PhoneNotRegisteredException;
+use App\Models\User;
 use App\Models\StudySession;
 use App\Services\AttendanceService;
 use Illuminate\Http\RedirectResponse;
@@ -57,7 +58,7 @@ class CheckInController extends Controller
 
         try {
             $attendance = $this->attendanceService->phoneCheckIn(
-                $request->phone,
+                User::normalizePhone($request->phone),
                 $studySession,
                 $request->code,
                 $location
