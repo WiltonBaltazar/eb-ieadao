@@ -119,6 +119,39 @@ class PhoneCheckInTest extends TestCase
         $this->assertStringContainsString('registar', $response->headers->get('Location'));
     }
 
+    public function test_check_in_matches_phone_with_repeated_country_code(): void
+    {
+        $student = User::factory()->create([
+            'role' => 'student',
+            'phone' => '+258842550315',
+            'email' => null,
+            'password' => null,
+            'classroom_id' => $this->classroom->id,
+        ]);
+
+        $response = $this->post("/check-in/{$this->session->id}", [
+            'phone' => '+258258842550315',
+            'code' => 'TESTCODE',
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('attendances', [
+            'study_session_id' => $this->session->id,
+            'student_id' => $student->id,
+        ]);
+    }
+
+    public function test_unknown_phone_with_repeated_country_code_is_prefilled_without_it(): void
+    {
+        $response = $this->post("/check-in/{$this->session->id}", [
+            'phone' => '+258258841234567',
+            'code' => 'TESTCODE',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('phone', '+258841234567');
+    }
+
     public function test_duplicate_attendance_cannot_be_created(): void
     {
         Attendance::create([

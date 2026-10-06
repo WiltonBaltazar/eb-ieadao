@@ -5,7 +5,15 @@ import PublicLayout from '@/Layouts/PublicLayout';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { AlertCircle, CheckCircle2, Building2, Calendar, Clock, Phone, Wifi, Church } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/Components/ui/select';
 import { AcessoSessaoPageProps, PageProps } from '@/types';
+import { COUNTRIES, flagEmoji, joinPhone, splitPhone } from '@/lib/countries';
 
 function CountdownBadge({ expiresAt }: { expiresAt: string }) {
   const [timeLeft, setTimeLeft] = useState('');
@@ -45,15 +53,40 @@ function CountdownBadge({ expiresAt }: { expiresAt: string }) {
 export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoSessaoPageProps) {
   const { flash, errors } = usePage<PageProps>().props;
 
+  const initialPhone = splitPhone(auth_phone ?? '');
+  const [phoneCountry, setPhoneCountry] = useState(initialPhone.dial);
+  const [phoneNumber, setPhoneNumber] = useState(initialPhone.number);
+
   const { data, setData, post, reset, processing } = useForm({
-    phone: auth_phone ?? '',
+    phone: joinPhone(initialPhone.dial, initialPhone.number),
     code: session.check_in_code ?? '',
     location: '' as '' | 'na_igreja' | 'online',
   });
 
+  const updatePhone = (dial: string, number: string) => {
+    setData('phone', joinPhone(dial, number));
+  };
+
+  const handlePhoneCountryChange = (dial: string) => {
+    setPhoneCountry(dial);
+    updatePhone(dial, phoneNumber);
+  };
+
+  const handlePhoneNumberChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '');
+    setPhoneNumber(digits);
+    updatePhone(phoneCountry, digits);
+  };
+
   const handleSubmit: FormEventHandler = (e) => {
     e.preventDefault();
-    post(`/check-in/${session.id}`, { onSuccess: () => reset() });
+    post(`/check-in/${session.id}`, {
+      onSuccess: () => {
+        reset();
+        setPhoneCountry(initialPhone.dial);
+        setPhoneNumber(initialPhone.number);
+      },
+    });
   };
 
   const statusConfig: Record<string, { label: string; bg: string; dot: string }> = {
@@ -187,15 +220,30 @@ export default function AcessoSessao({ session, auth_phone, auth_name }: AcessoS
                   <label htmlFor="phone" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Telefone
                   </label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="Ex: 841234567 ou +44123456789"
-                    value={data.phone}
-                    onChange={(e) => setData('phone', e.target.value)}
-                    autoFocus={!auth_phone}
-                    className="h-11 rounded-xl border-slate-200 focus:border-brand-accent focus:ring-brand-accent/20"
-                  />
+                  <div className="flex gap-2">
+                    <Select value={phoneCountry} onValueChange={handlePhoneCountryChange}>
+                      <SelectTrigger className="h-11 w-[112px] shrink-0 rounded-xl border-slate-200 focus:border-brand-accent focus:ring-brand-accent/20">
+                        <SelectValue placeholder="+258" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map((c) => (
+                          <SelectItem key={c.iso2} value={c.dial}>
+                            {flagEmoji(c.iso2)} {c.dial}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      inputMode="numeric"
+                      placeholder="841234567"
+                      value={phoneNumber}
+                      onChange={(e) => handlePhoneNumberChange(e.target.value)}
+                      autoFocus={!auth_phone}
+                      className="h-11 rounded-xl border-slate-200 focus:border-brand-accent focus:ring-brand-accent/20"
+                    />
+                  </div>
                 </div>
 
 
