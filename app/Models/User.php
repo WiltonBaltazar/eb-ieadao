@@ -116,10 +116,13 @@ class User extends Authenticatable
         return $this->readiness()->label();
     }
 
-    // Match a phone regardless of format: "+258842550315", "258842550315" and the
-    // legacy local "842550315" (pre country-selector Mozambican numbers) are the same number
+    // Match a phone regardless of format: "+258842550315", "258842550315" and legacy
+    // numbers stored without a country code before the country selector existed
+    // ("842550315", or a foreign "937840720") are the same number
     public static function phoneVariants(string $phone): array
     {
+        $international = (bool) preg_match('/^\s*(\+|00)/', $phone);
+
         $digits = preg_replace('/\D/', '', $phone);
         if (str_starts_with($digits, '00')) {
             $digits = substr($digits, 2);
@@ -134,14 +137,49 @@ class User extends Authenticatable
 
         $variants = [trim($phone), $digits, '+' . $digits];
 
-        if (strlen($digits) === 12 && str_starts_with($digits, '258')) {
-            $variants[] = substr($digits, 3);
-        } elseif (strlen($digits) === 9 && str_starts_with($digits, '8')) {
+        if ($international || (strlen($digits) === 12 && str_starts_with($digits, '258'))) {
+            // A legacy number only matches the country it belongs to: Mozambican-looking
+            // numbers only under +258, anything else only under other codes, so
+            // "+258937840720" does not match the Portuguese legacy "937840720"
+            [$code, $national] = self::splitCountryCode($digits);
+            if ($code !== null && self::looksMozambican($national) === ($code === '258')) {
+                $variants[] = $national;
+            }
+        } elseif (self::looksMozambican($digits)) {
             $variants[] = '258' . $digits;
             $variants[] = '+258' . $digits;
         }
 
         return array_values(array_unique($variants));
+    }
+
+    // Mozambican mobiles: 9 digits starting with 8 (82–87)
+    private static function looksMozambican(string $national): bool
+    {
+        return (bool) preg_match('/^8\d{8}$/', $national);
+    }
+
+    // "351937840720" -> ["351", "937840720"]; [null, digits] when no known code matches
+    private static function splitCountryCode(string $digits): array
+    {
+        $maxLengths = self::phoneMaxLengths();
+
+        foreach ([3, 2, 1] as $codeLength) {
+            $code = substr($digits, 0, $codeLength);
+            if (isset($maxLengths[$code])) {
+                return [$code, substr($digits, $codeLength)];
+            }
+        }
+
+        return [null, $digits];
+    }
+
+    // Shared with the country selector (resources/js/lib/phone-max-lengths.json)
+    private static function phoneMaxLengths(): array
+    {
+        static $maxLengths = null;
+
+        return $maxLengths ??= json_decode(file_get_contents(resource_path('js/lib/phone-max-lengths.json')), true);
     }
 
     // Drop a country code typed again after selecting it: "+258258842550315" -> "+258842550315"
@@ -158,11 +196,9 @@ class User extends Authenticatable
 
     // Only drops the code when the number is too long for that country but fits
     // without it, so real numbers starting with the code (French "+33 3…") are kept.
-    // Lengths are shared with the country selector (resources/js/lib/phone-max-lengths.json)
     private static function dropRepeatedCountryCode(string $digits): string
     {
-        static $maxLengths = null;
-        $maxLengths ??= json_decode(file_get_contents(resource_path('js/lib/phone-max-lengths.json')), true);
+        $maxLengths = self::phoneMaxLengths();
 
         foreach ([3, 2, 1] as $codeLength) {
             $code = substr($digits, 0, $codeLength);
